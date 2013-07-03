@@ -74,7 +74,7 @@ dlmGibbsDIGfixed <- function (y, mod, a.y, b.y, a.theta, b.theta, shape.y, rate.
         p <- r
     }
     nobs <- NROW(y)
-    effNobs <- nobs #NROW(na.omit(y)) 
+    effNobs <- NROW(na.omit(y)) 
     if (is.numeric(thin) && (thin <- as.integer(thin)) >= 0) {
         every <- thin + 1
         mcmc <- n.sample * every
@@ -253,18 +253,19 @@ hist(1/rgamma(10000, shape = shape.theta, rate = rate.theta), breaks="FD", xlim=
 # the code for this method is at the top of the file; make
 # sure you run it first.
 #
-M = 1000
+burn.in = 500
+M = 1000 + burn.in
 fit.model = dlmModTrig(S, Q, dV=0.2, dW=0.1)
 gibbs = dlmGibbsDIGfixed(y=Y, mod=fit.model,
             shape.y=shape.y, rate.y=rate.y, shape.theta=shape.theta, rate.theta=rate.theta,
-            n.sample=M, lasso=T, save.states=TRUE)
+            n.sample=M, thin = 0, lasso=T, save.states=TRUE)
 
 #
 # plot predictive model: observed, predicted and the true signal together
 #
 Y.predict.data = adply(gibbs$theta, 1,
       function(theta) {
-        Fx = t(theta) %*% fit.model$FF[1,]        
+        Fx = t(theta[,burn.in:M]) %*% fit.model$FF[1,]        
         return(Fx)
       }) 
 Y.predict.data = melt(Y.predict.data, id.var="X1")
@@ -296,7 +297,7 @@ print(Y.predict.plot)
 #
 x.expanded = melt(X)
 x.expanded$X3 = rep((M+1):(M+Q*2), each=nrow(X))
-x.plot.data = cbind(melt(gibbs$theta), type="estimated")
+x.plot.data = cbind(melt(gibbs$theta[,,burn.in:M]), type="estimated")
 x.plot.data = rbind(x.plot.data, cbind(x.expanded, type="actual"))
 colnames(x.plot.data) = c("t", "j", "i", "X", "type")
 
@@ -319,7 +320,7 @@ covar.true.data = data.frame(t=seq_along(gibbs$dV),
 colnames(covar.true.data) = c("t", "V", paste("W", sep=".", 1:length(diag(true.model$W))), "type")
 covar.true.data = melt(covar.true.data, id.vars=c("t", "type"))
 
-covar.estimated.data = data.frame(t=seq_along(gibbs$dV), V=gibbs$dV, gibbs$dW, type="estimated")
+covar.estimated.data = data.frame(t=burn.in:M, V=gibbs$dV[burn.in:M], gibbs$dW[burn.in:M,], type="estimated")
 #covar.data = as.data.frame(rbind(covar.data, covar.true.data))
 covar.plot.data = melt(covar.estimated.data, id.vars=c("t", "type"))
                    
