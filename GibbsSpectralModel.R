@@ -31,6 +31,8 @@ library(ggplot2)
 library(plyr)
 library(reshape)
 
+option(error=recover)
+
 #
 # this is a copy of the dlm package's dlmGibbsDIG function.
 # it has a small fix for missing values.
@@ -128,30 +130,38 @@ dlmGibbsDIGfixed <- function (y, mod, a.y, b.y, a.theta, b.theta, shape.y, rate.
     for (it in 1:mcmc) {
         if (progressBar) 
             setTxtProgressBar(pb, it)
+
+        #
+        # apply bayesian lasso
+        #
+        #lambda.t = rexp(1,rate=2)
+        #mod$W = mod$W * sqrt(lambda.t)
+        #browser()
+
         modFilt <- dlmFilter(y, mod, simplify = TRUE)
-        theta[] <- dlmBSample(modFilt)
+        newTheta <- dlmBSample(modFilt)
+
+        if (any(is.nan(theta[])) || any(is.na(theta[]))) {
+          browser()
+        } else {
+          theta[] = newTheta
+        }
 
         y.center <- na.omit(y - tcrossprod(theta[-1, , drop = FALSE], 
             mod$FF))
         SSy <- drop(crossprod(y.center))
         mod$V[] <- 1/rgamma(1, shape = shape.y, rate = rate.y + 
             0.5 * SSy)
-        if (any(is.nan(diag(mod$V)[])) || any(is.na(diag(mod$V)[]))) {
-          hist(1/rgamma(500000, shape = shape.theta, rate = rate.theta + 0.5 * SStheta))
-          browser()
-        }
         theta.center <- theta[-1, , drop = FALSE] - tcrossprod(theta[-(nobs + 
             1), , drop = FALSE], mod$GG)
         SStheta <- drop(sapply(1:p, function(i) crossprod(theta.center[, 
             i])))
         SStheta <- colSums((theta[-1, 1:p, drop = FALSE] - tcrossprod(theta[-(nobs + 
             1), , drop = FALSE], mod$GG)[, 1:p])^2)
+        
         diag(mod$W)[1:p] <- 1/rgamma(p, shape = shape.theta, 
             rate = rate.theta + 0.5 * SStheta)
-        if (any(is.nan(diag(mod$W)[1:p])) || any(is.na(diag(mod$W)[1:p]))) {
-          hist(1/rgamma(500000, shape = shape.theta, rate = rate.theta + 0.5 * SStheta))
-          browser()
-        }
+
         if (!(it%%every)) {
             it.save <- it.save + 1
             if (save.states) 
@@ -216,13 +226,16 @@ print(X.plot)
 # observation and state noise.
 #
 shape.y = 10
-rate.y = 10
-shape.theta = 2
-rate.theta = 5
+rate.y = 10                                                             
+
 # prior for observation error
 hist(1/rgamma(10000, shape = shape.y, rate = rate.y))
+
+shape.theta = 5
+rate.theta = 1/5
+
 # prior for state error
-hist(1/rgamma(10000, shape = shape.theta, rate = rate.theta))
+hist(1/rgamma(100000, shape = shape.theta, rate = rate.theta))
 
 #
 # the code for this method is at the top of the file; make
