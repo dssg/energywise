@@ -140,8 +140,8 @@ dlmGibbsDIGfixed <- function (y, mod, a.y, b.y, a.theta, b.theta, shape.y, rate.
         # state covariance in the dlm package.
         #
         if (lasso) {
-          lambda.t = rexp(nobs+1,rate=2)
-          mod$X = lambda.t %o% diag(mod$W)
+          lambda.t = t(replicate(nobs+1, rexp(ncol(mod$W),rate=2)))
+          mod$X = lambda.t * diag(mod$W)
           mod$JW = diag(1:nrow(mod$W))
         }
 
@@ -162,8 +162,9 @@ dlmGibbsDIGfixed <- function (y, mod, a.y, b.y, a.theta, b.theta, shape.y, rate.
         theta.center <- theta[-1, , drop = FALSE] - tcrossprod(theta[-(nobs + 
             1), , drop = FALSE], mod$GG) 
         if (lasso) {
-          theta.center <- theta.center * 1/sqrt(lambda.t[-1])
-        }
+          theta.center <- theta.center / sqrt(lambda.t[-1,])
+        } 
+
 
         SStheta <- drop(sapply(1:p, function(i) crossprod(theta.center[, 
             i])))
