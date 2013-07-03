@@ -225,7 +225,7 @@ hist(1/rgamma(10000, shape = shape.y, rate = rate.y))
 hist(1/rgamma(10000, shape = shape.theta, rate = rate.theta))
 
 #
-# the code for this method is at the bottom of the file; make
+# the code for this method is at the top of the file; make
 # sure you run it first.
 #
 M = 1000
