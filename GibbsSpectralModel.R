@@ -140,6 +140,8 @@ dlmGibbsDIGfixed <- function (y, mod, a.y, b.y, a.theta, b.theta, shape.y, rate.
         # state covariance in the dlm package.
         #
         if (lasso) {
+          # the following is for shrinkage on an entire harmonic
+          #lambda.t = t(replicate(nobs+1, rep(rexp(ncol(mod$W)/2,rate=2), each=2)))
           lambda.t = t(replicate(nobs+1, rexp(ncol(mod$W),rate=2)))
           mod$X = lambda.t * diag(mod$W)
           mod$JW = diag(1:nrow(mod$W))
@@ -303,8 +305,11 @@ x.plot.data = rbind(x.plot.data, cbind(x.expanded, type="actual"))
 colnames(x.plot.data) = c("t", "j", "i", "X", "type")
 
 X.gibbs.plot <- ggplot(x.plot.data, aes(x=t, y=X, group=j, color=type)) + 
-  geom_path(aes(x=t, y=X, group=i, alpha=type)) + facet_grid(j ~ ., scales="free") +
-  scale_alpha_manual(values=c(1, 0.3)) 
+  geom_path(aes(x=t, y=X, group=i, alpha=type)) + 
+  facet_grid(j ~ ., scales="free") +
+  scale_alpha_manual(values=c(1, 0.3)) +
+  stat_summary(fun.y=mean, colour="yellow", geom="line", 
+               mapping=aes(group="estimated"))
 print(X.gibbs.plot)
 
 
