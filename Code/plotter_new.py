@@ -194,7 +194,12 @@ def make_avg_week_fig(d, avgweek):
     avgweek.set_title("Average Week")
     avgweek.set_ylabel("Temperature (F) / Energy Usage (kwh)")
     avgweek.set_xlim(-0.5, 24.5)
-    avgweek.set_xticks(range(0, 168, 4))
+    avgweek.set_xticks(range(0, 168, 24))
+    avgweek.set_xticklabels(["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])
+    labels = avgweek.get_xticklabels() 
+    for label in labels: 
+        label.set_rotation(30) 
+
     avgweek.grid(True)
     avgweek.legend()
 
