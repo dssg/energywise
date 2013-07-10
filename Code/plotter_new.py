@@ -211,7 +211,7 @@ def make_hist_fig(d, hist):
     kwhs, kwhs_oriflag   = d["kwhs"]
     temps, temps_oriflag = d["temps"]
     
-    hist.hist(kwhs[kwhs_oriflag])
+    hist.hist(kwhs[kwhs_oriflag], bins = 50)
     hist.set_title("Histogram of Energy Usage")
     hist.set_ylabel("kwhs")
     
