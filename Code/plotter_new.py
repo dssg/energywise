@@ -203,7 +203,18 @@ def make_avg_week_fig(d, avgweek):
     avgweek.grid(True)
     avgweek.legend()
 
-
+def make_hist_fig(d, hist):
+    bid                  = d["bid"]
+    sic                  = d["sic"]
+    btype                = d["btype"]
+    times                = d["times"]
+    kwhs, kwhs_oriflag   = d["kwhs"]
+    temps, temps_oriflag = d["temps"]
+    
+    hist.hist(kwhs[kwhs_oriflag])
+    hist.set_title("Histogram of Energy Usage")
+    hist.set_ylabel("kwhs")
+    
 def plot_it(d):
     bid = d["bid"]
     fig = plt.figure(figsize = (20, 20))
@@ -216,12 +227,14 @@ def plot_it(d):
     tvk      = fig.add_subplot(nrows, 1, 3)
     avgday   = fig.add_subplot(nrows, 2, 3)
     avgweek  = fig.add_subplot(nrows, 2, 4)
-    freqs    = fig.add_subplot(nrows, ncols, 1)
+    #freqs    = fig.add_subplot(nrows, ncols, 1)
+    hist    = fig.add_subplot(nrows, ncols, 1)
     
     make_text_fig(d, textfig)
     make_temp_vs_time_fig(d, tvt)
     make_kwhs_vs_time_fig(d, tvk)
-    make_freqs_fig(d, freqs)
+    #make_freqs_fig(d, freqs)
+    make_hist_fig(d, hist)
     make_temp_vs_kwh_fig(d, tmpsvk)
     make_avg_day_fig(d, avgday)
     make_avg_week_fig(d, avgweek)
