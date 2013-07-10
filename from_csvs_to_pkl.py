@@ -1,23 +1,21 @@
-from utils import data_loc, fig_loc, qload, qdump
-from utils import fill_in, daterange
-from collections import defaultdict
-import string
-import time
-import cPickle as pickle
-import numpy as np
-import pytz
-import datetime as rdatetime
-from datetime import datetime
+from    utils import data_loc, fig_loc, qload, qdump
+from    utils import fill_in, daterange
+from    collections import defaultdict
+import  string
+import  time
+import  cPickle as pickle
+import  numpy as np
+import  pytz
+import  datetime as rdatetime
+from    datetime import datetime
+from   dateutil import tz
 
-from dateutil import tz
-
-alt_str = "_updated" #change this if you cange the examples csv file
+alt_str       = "_updated" #change this if you cange the examples csv file
 only_one_year = True
 
 utc_tz = pytz.utc
 # The Agentis data is all from Illinois
 tz_used = pytz.timezone("US/Central")
-
 
 def timeutc_to_dow(time):
     '''Given a UTC Unix timestamp, returns the day of the week in Central time. 0 = Monday, 6 = Sunday'''
@@ -40,9 +38,8 @@ def get_desc_map():
 
     finn_desc = data_loc + "Agentis/Examples" + alt_str + ".csv"
     fin_desc  = open(finn_desc)
-    
-    desc_map = {}
-    dummy    = fin_desc.readline() #skip header info
+    desc_map  = {}
+    dummy     = fin_desc.readline() #skip header info
     
     for l in fin_desc:
         line    = map(string.strip, l.split(","))
@@ -76,7 +73,7 @@ def make_data_pkl():
         fin.readline()#ignore header
         for l in fin:
             ind, time_stamp, kwh, v3, temp, date = (0, 0, 0, 0, 0, "0") #just to reset to be safe
-            line                                 = map(string.strip, l.split(","))
+            line = map(string.strip, l.split(","))
             
             #if "NA" in line:
                 #line = [x if x != "NA" else 0 for x in line ]
@@ -94,15 +91,11 @@ def make_data_pkl():
             start_time = "01/01/2011 00:00:00"
             end_time   = "01/01/2012 00:00:00"
 
-            #start_ts = int(time.mktime(datetime.strptime(start_time, "%m/%d/%Y %H:%M:%S").timetuple()))
-            #end_ts = int(time.mktime(datetime.strptime(end_time, "%m/%d/%Y %H:%M:%S").timetuple()))
             start_ts   = datetime.strptime(start_time, "%m/%d/%Y %H:%M:%S")
             start_ts   = start_ts.replace(tzinfo = tz_used)
             end_ts     = datetime.strptime(end_time, "%m/%d/%Y %H:%M:%S")
             end_ts     = end_ts.replace(tzinfo = tz_used)
             ind        = int(string.strip(ind, '"'))
-            #time_stamp = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
-            #time_stamp = float(time_stamp)
             time_stamp = datetime.fromtimestamp(float(time_stamp), utc_tz)
             
             if (not only_one_year or (time_stamp >= start_ts and time_stamp < end_ts)):
@@ -124,8 +117,6 @@ def make_data_pkl():
         start_date   = datetime.strptime("1/1/2011 00:00:00", "%m/%d/%Y %H:%M:%S").replace(tzinfo = tz_used)
         
 
-#        full_year_times = \
-#            [(start_date + rdatetime.timedelta(hours = n)).astimezone(utc_tz) for n in range(8760)]
         full_year_times = \
             [(start_date + rdatetime.timedelta(hours = n)) for n in range(8760)]
         full_temps, temps_oriflag = fill_in(temps, full_year_times)
@@ -133,7 +124,6 @@ def make_data_pkl():
 
         temp_times, temp_vals = zip(*full_temps)
         kwh_times,  kwh_vals  = zip(*full_kwhs)
-        #record = {"bid": fnum, "sic": fsic, "btype":fbtype, "temps":temps,  "kwhs": kwhs}
         record = {
             "bid"      : fnum,
             "sic"      : fsic,
