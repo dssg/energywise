@@ -42,14 +42,25 @@ y.plot = ggplot(results, aes(x=timestamp.utc, y=kwh, group=location_id, color=si
 # jags/bugs can use it.
 # note: we also need a separate vector reference for the sic codes
 #
-y.matrix = acast(results, timestamp.utc ~ location_id, value.var="kwh", fill=0)
+y.full.matrix = acast(results, timestamp.utc ~ location_id, value.var="kwh", fill=0)
 dref.matrix = as.matrix(data.ref[,1:2])
-building.sics = data.ref[data.ref$location_id %in% as.numeric(dimnames(y.matrix)[[2]]),]$sic_code
+building.sics = data.ref[data.ref$location_id %in% as.numeric(dimnames(y.full.matrix)[[2]]),]$sic_code
 building.sics = as.integer(as.factor(building.sics))
 
+#
+# create a matrix of indices that can be used to include
+# time dependent factors.
+#
+posix.timestamps = as.POSIXct(unique(results$timestamp.utc), origin="1970-01-01")
+timestamp.full.factors = cbind(year=as.factor(format.POSIXct(posix.timestamps, '%Y')),
+                          month=as.factor(format.POSIXct(posix.timestamps, '%m')), 
+                          day=as.factor(format.POSIXct(posix.timestamps, '%d')))
+
 # use a subset of data in order to see the results today.
-matplot(y.matrix[5000:6000,], type='l', log="y")
-y.matrix = y.matrix[5000:6000,]
+x.range = 5000:6000
+matplot(y.full.matrix[x.range,], type='l', log="y")
+y.matrix = y.full.matrix[x.range,]
+timestamp.factors = timestamp.full.factors[x.range,]
 
 
 #
@@ -58,21 +69,43 @@ y.matrix = y.matrix[5000:6000,]
 #
 model.str <- 'model
 {
-  for (k in 1:K) {
-    #gamma[k] ~ dnorm(0, 1)
-    beta[k] ~ dnorm(0, 1) T(0,1)
-    mu[k] ~ dnorm(0, 1) 
+  # initialize sic dependent priors
+  for (k in 1:N.sics) {
+    for (m in 1:N.months) {
+      #gamma[k, m] ~ dnorm(0, 1)
+      beta[k, m] ~ dnorm(0, 1) T(0,1)
+      mu[k, m] ~ dnorm(0, 1) 
+    }
   }
-  for (j in 1:J) {
-    alpha[j] ~ dnorm(0, 1)
-    x[1,j] <- mu[sics.index[j]] + alpha[j]
+  
+  # initialize building priors
+  for (j in 1:N.buildings) {
+    for (m in 1:N.months) {
+      alpha[j,m] ~ dnorm(0, 1)
+    }
+
+    bld.mean[1,j] <- mu[sics.index[j], date.index[1, 2]] 
+    sic.mean[1,j] <- alpha[j, date.index[1, 2]]
+     
     #err[1,j] <- Y[1,j] - x[1,j] 
+
+    x[1,j] <- bld.mean[1,j] + sic.mean[1, j]
     Y[1,j] ~ dnorm(x[1,j], 1)
   }
-  for (n in 2:N) {
-    for (j in 1:J) {
-      x[n,j] <- mu[sics.index[j]] + alpha[j] + beta[sics.index[j]] * x[n-1,j] #+ gamma[sics.index[j]] * err[n-1,j]
+
+  for (n in 2:N.obs) {
+    for (j in 1:N.buildings) {
+
+      # building-only terms
+      bld.mean[n,j] <- alpha[j, date.index[n,2]] 
+
+      # sic dependent terms
+      sic.mean[n,j] <- mu[sics.index[j], date.index[n,2]] + beta[sics.index[j], date.index[n,2]] * x[n-1,j] 
+      
+      # + gamma[sics.index[j]] * err[n-1,j]
       #err[n,j] <- Y[n,j] - x[n,j] 
+
+      x[n,j] <- bld.mean[n,j] + sic.mean[n, j]
       Y[n,j] ~ dnorm(x[n,j], 1)
     }
   }
@@ -82,20 +115,27 @@ model.file = file("energyARMA_model.bug")
 writeLines(model.str, model.file)
 close(model.file)
 
-K = length(unique(building.sics))
+N.sics = length(unique(building.sics))
 data.dim = dim(y.matrix)
-J = data.dim[2]
+N.buildings = data.dim[2]
+N.months = length(unique(timestamp.factors[,"month"]))
+N.years = length(unique(timestamp.factors[,"year"]))
+N.days = length(unique(timestamp.factors[,"day"]))
 data <- list("Y" = y.matrix, 
-             "N" = data.dim[1], 
-             "J"=J, 
-             "sics.index"=building.sics, 
-             "K"=K)
+             "N.obs" = data.dim[1], 
+             "N.buildings" = N.buildings, 
+             "sics.index" = building.sics, 
+             "date.index" = timestamp.factors,
+             "N.years" = N.years,
+             "N.months" = N.months,
+             "N.days" = N.days,
+             "N.sics" = N.sics)
 
 
-inits <- list(list(alpha = rnorm(J, 0, 1000), 
-                   beta = runif(K, 0, 1), 
-                   #gamma = rnorm(K, 0, 100), 
-                   mu = rnorm(K, 0, 1000)
+inits <- list(list(alpha = t(replicate(N.buildings, rnorm(N.months, 0, 1000))), 
+                   mu = t(replicate(N.sics, rnorm(N.months, 0, 1000))),
+                   beta = t(replicate(N.sics, runif(N.months, 0, 1)))
+                   #gamma = t(replicate(N.sics, rnorm(N.months, 0, 1000))), 
                    ))
 
 parameters <- names(inits[[1]])             
