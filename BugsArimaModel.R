@@ -36,7 +36,6 @@ results$sic_code <- as.factor(results$sic_code)
 # check out the data with associated sic code
 #
 y.plot = ggplot(results, aes(x=timestamp.utc, y=kwh, group=location_id, color=sic_code)) + geom_path(alpha=0.4)  + scale_y_log10() #+ facet_grid(sic_code ~ ., scales="free")
-#y.plot = ggplot(results, aes(x=timestamp.utc, y=temperature, group=location_id, color=location_id)) + geom_path(alpha=0.4) + scale_y_log10() + facet_grid(sic_code ~ .)
 
 #
 # now, put the data in matrix format with observable kwh, so that
@@ -60,20 +59,20 @@ y.matrix = y.matrix[5000:6000,]
 model.str <- 'model
 {
   for (k in 1:K) {
-    gamma[k] ~ dnorm(0, 1)
+    #gamma[k] ~ dnorm(0, 1)
     beta[k] ~ dnorm(0, 1) T(0,1)
     mu[k] ~ dnorm(0, 1) 
   }
   for (j in 1:J) {
     alpha[j] ~ dnorm(0, 1)
     x[1,j] <- mu[sics.index[j]] + alpha[j]
-    err[1,j] <- Y[1,j] - x[1,j] 
+    #err[1,j] <- Y[1,j] - x[1,j] 
     Y[1,j] ~ dnorm(x[1,j], 1)
   }
   for (n in 2:N) {
     for (j in 1:J) {
-      x[n,j] <- mu[sics.index[j]] + alpha[j] + beta[sics.index[j]] * x[n-1,j] + gamma[sics.index[j]] * err[n-1,j]
-      err[n,j] <- Y[n,j] - x[n,j] 
+      x[n,j] <- mu[sics.index[j]] + alpha[j] + beta[sics.index[j]] * x[n-1,j] #+ gamma[sics.index[j]] * err[n-1,j]
+      #err[n,j] <- Y[n,j] - x[n,j] 
       Y[n,j] ~ dnorm(x[n,j], 1)
     }
   }
@@ -95,7 +94,7 @@ data <- list("Y" = y.matrix,
 
 inits <- list(list(alpha = rnorm(J, 0, 1000), 
                    beta = runif(K, 0, 1), 
-                   gamma = rnorm(K, 0, 100), 
+                   #gamma = rnorm(K, 0, 100), 
                    mu = rnorm(K, 0, 1000)
                    ))
 
