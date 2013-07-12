@@ -57,7 +57,7 @@ timestamp.full.factors = cbind(year=as.factor(format.POSIXct(posix.timestamps, '
                           day=as.factor(format.POSIXct(posix.timestamps, '%d')))
 
 # use a subset of data in order to see the results today.
-x.range = 5000:5100
+x.range = 5000:6000
 y.matrix = y.full.matrix[x.range,]
 timestamp.factors = timestamp.full.factors[x.range,]
 
@@ -72,35 +72,33 @@ model.str <- 'model
   # initialize sic dependent priors
   for (k in 1:N.sics) {
     for (m in 1:N.months) {
-      ar1.sic.month[k, m] ~ dunif(0,1)
-      mean.sic.month[k, m] ~ dnorm(0, 1e5) 
+      mean.sic.month[k, m] ~ dnorm(0, 1/1e5) 
     }
     for (d in 1:N.days) {
-      ar1.sic.day[k, d] ~ dunif(0,1)
-      mean.sic.day[k, d] ~ dnorm(0, 1e5) 
+      ar1.sic.day[k, d] ~ dnorm(0,1/10)
+      mean.sic.day[k, d] ~ dnorm(0, 1/1e5) 
     }
   }
   
   # initialize building priors
   for (j in 1:N.buildings) {
     for (d in 1:N.days) {
-      mean.bld.day[j,d] ~ dnorm(0, 1e5)
+      mean.bld.day[j,d] ~ dnorm(0, 1/1e5)
     }
     for (m in 1:N.months) {
-      mean.bld.month[j,m] ~ dnorm(0, 1e5)
+      mean.bld.month[j,m] ~ dnorm(0, 1/1e5)
     }
 
     phi.y[j] ~ dgamma(0.01, 0.01)
-    phi.x[j] ~ dgamma(0.01, 0.01)
 
     # initialize initial state value while we are at it
     bld.mean[1,j] <- mean.bld.month[j, date.index[1, 2]] + mean.bld.day[j, date.index[1, 3]] 
 
-    sic.mean[1,j] <- mean.sic.month[sics.index[j], date.index[1, 2]] + mean.sic.day[sics.index[j], date.index[1, 3]] + ar1.sic.month[sics.index[j], date.index[1,2]] * Y0[j] + ar1.sic.day[sics.index[j], date.index[1,3]] * Y0[j] 
+    sic.mean[1,j] <- mean.sic.month[sics.index[j], date.index[1, 2]] + mean.sic.day[sics.index[j], date.index[1, 3]] + ar1.sic.day[sics.index[j], date.index[1,3]] * Y0[j]
      
     #err[1,j] <- Y[1,j] - x[1,j] 
 
-    x[1,j] ~ dnorm(bld.mean[1,j] + sic.mean[1, j], phi.x[j])
+    x[1,j] ~ dnorm(bld.mean[1,j] + sic.mean[1, j], phi.y[j] * 0.97)
     Y[1,j] ~ dnorm(x[1,j], phi.y[j]) 
   }
 
@@ -111,10 +109,10 @@ model.str <- 'model
       bld.mean[n,j] <- mean.bld.month[j, date.index[n, 2]] + mean.bld.day[j, date.index[n, 3]] 
 
       # sic dependent terms
-      sic.mean[n,j] <- mean.sic.month[sics.index[j], date.index[n, 2]] + mean.sic.day[sics.index[j], date.index[n, 3]] + ar1.sic.month[sics.index[j], date.index[n,2]] * x[n-1,j] + ar1.sic.day[sics.index[j], date.index[n,3]] * x[n-1,j] 
+      sic.mean[n,j] <- mean.sic.month[sics.index[j], date.index[n, 2]] + mean.sic.day[sics.index[j], date.index[n, 3]] + ar1.sic.day[sics.index[j], date.index[n,3]] * x[n-1,j]
      
       
-      x[n,j] ~ dnorm(bld.mean[n,j] + sic.mean[n,j], phi.x[j])
+      x[n,j] ~ dnorm(bld.mean[n,j] + sic.mean[n,j], phi.y[j] * 0.97)
       Y[n,j] ~ dnorm(x[n,j], phi.y[j])
     }
   }
@@ -142,45 +140,37 @@ data <- list("Y" = y.matrix,
              "N.days" = N.days,
              "N.sics" = N.sics)
 
-inits <- list(list())
-#inits <- list(list(alpha = matrix(replicate(N.buildings, rnorm(N.months, 0, 1e2)),
-#                                  nrow=N.buildings, ncol=N.months), 
-#                   mu = matrix(replicate(N.sics, rnorm(N.months, 0, 1e2)),
-#                               nrow=N.sics, ncol=N.months),
-#                   beta = matrix(replicate(N.sics, runif(N.months, 0, 1)),
-#                                 nrow=N.sics, ncol=N.months)
-#                   #gamma = matrix(replicate(N.sics, rnorm(N.months, 0, 1e5))
-#                   #              nrow=N.sics, ncol=N.months), 
-#                   ))
-                                                                   
 #parameters <- c(names(inits[[1]]), "x", "phi.y", "phi.x")              
 parameters <- c("mean.sic.day", "mean.sic.month", 
                 "mean.bld.day", "mean.bld.month", 
-                "ar1.sic.day", "ar1.sic.month", 
-                "x", "phi.y", "phi.x")              
+                "ar1.sic.day", 
+                "x", "phi.y")              
 
-options(error=NULL)
+options(max.print=10000, error=recover)
 
 n.samples <- 2000
+n.chains <- 3
 load.module("glm")
-model.sim <- jags(data, inits, parameters, model.file="energyARMA_model.bug",  
-                  n.iter=n.samples, n.chains=1, DIC=F)
+model.sim <- jags(data, NULL, parameters, model.file="energyARMA_model.bug",  
+                  n.iter=n.samples, n.chains=n.chains, DIC=F)
 model.sim <- autojags(model.sim)
 
 print(model.sim)
-
-#model.mcmc <- as.mcmc(model.sim)
-#densityplot(model.mcmc)
-#xyplot(model.mcmc)
+plot(model.sim)
 
 state.samples = melt(model.sim$BUGSoutput$sims.list$x)
 colnames(state.samples) = c("sample", "obs", "location_id", "kwh")
+
+# select a subset, so this doesn't take forever.
+#subset.vals = sample(1:(n.chains*n.samples), 1000)
+#subset.idx = state.samples$sample %in% subset.idx
+#state.samples = subset(state.samples, sample %in% subset.idx)
 
 state.samples = cbind(state.samples, type="sample")
 y.matrix.melted = melt(unname(y.matrix), varnames=NULL)
 colnames(y.matrix.melted) = c("obs", "location_id", "kwh")
 
-y.matrix.melted = cbind(y.matrix.melted, "sample"=n.samples + 1, "type"="actual")
+y.matrix.melted = cbind(y.matrix.melted, "sample"=n.chains*n.samples + 1, "type"="actual")
 state.plot.data = rbind(state.samples, y.matrix.melted)
 rm(state.samples)
 
@@ -191,7 +181,8 @@ state.plot.data$obs = as.numeric(state.plot.data$obs)
 # check out one location
 #
 state.predict.plot <- ggplot(subset(state.plot.data, 
-                                    location_id==6 & ((sample >= 1 & sample < 100) | sample==n.samples+1)), 
+                                    location_id==6 & ((sample >= 1 & sample < 500) 
+                                                      | sample==n.chains*n.samples+1)), 
                              aes(x=obs, y=kwh, group=type, colour=type)) +
   geom_path(aes(x=obs, y=kwh, group=sample, alpha=type)) + 
   scale_size_manual(values=c(1, 1.5)) +
