@@ -72,43 +72,49 @@ model.str <- 'model
   # initialize sic dependent priors
   for (k in 1:N.sics) {
     for (m in 1:N.months) {
-      #gamma[k, m] ~ dnorm(0, 1)
-      beta[k, m] ~ dnorm(0, 1) T(0,1)
-      mu[k, m] ~ dnorm(0, 1) 
+      ar1.sic.month[k, m] ~ dunif(0,1)
+      mean.sic.month[k, m] ~ dnorm(0, 1e5) 
+    }
+    for (d in 1:N.days) {
+      ar1.sic.day[k, d] ~ dunif(0,1)
+      mean.sic.day[k, d] ~ dnorm(0, 1e5) 
     }
   }
   
   # initialize building priors
   for (j in 1:N.buildings) {
+    for (d in 1:N.days) {
+      mean.bld.day[j,d] ~ dnorm(0, 1e5)
+    }
     for (m in 1:N.months) {
-      alpha[j,m] ~ dnorm(0, 1)
+      mean.bld.month[j,m] ~ dnorm(0, 1e5)
     }
 
     phi.y[j] ~ dgamma(0.01, 0.01)
     phi.x[j] ~ dgamma(0.01, 0.01)
 
-    bld.mean[1,j] <- mu[sics.index[j], date.index[1, 2]] 
-    sic.mean[1,j] <- alpha[j, date.index[1, 2]] + beta[sics.index[j], date.index[1,2]] * Y0[j] 
+    # initialize initial state value while we are at it
+    bld.mean[1,j] <- mean.bld.month[j, date.index[1, 2]] + mean.bld.day[j, date.index[1, 3]] 
+
+    sic.mean[1,j] <- mean.sic.month[sics.index[j], date.index[1, 2]] + mean.sic.day[sics.index[j], date.index[1, 3]] + ar1.sic.month[sics.index[j], date.index[1,2]] * Y0[j] + ar1.sic.day[sics.index[j], date.index[1,3]] * Y0[j] 
      
     #err[1,j] <- Y[1,j] - x[1,j] 
 
     x[1,j] ~ dnorm(bld.mean[1,j] + sic.mean[1, j], phi.x[j])
-    Y[1,j] ~ dnorm(x[1,j], phi.y[j])
+    Y[1,j] ~ dnorm(x[1,j], phi.y[j]) 
   }
 
   for (n in 2:N.obs) {
     for (j in 1:N.buildings) {
 
       # building-only terms
-      bld.mean[n,j] <- alpha[j, date.index[n,2]] 
+      bld.mean[n,j] <- mean.bld.month[j, date.index[n, 2]] + mean.bld.day[j, date.index[n, 3]] 
 
       # sic dependent terms
-      sic.mean[n,j] <- mu[sics.index[j], date.index[n,2]] + beta[sics.index[j], date.index[n,2]] * x[n-1,j] 
+      sic.mean[n,j] <- mean.sic.month[sics.index[j], date.index[n, 2]] + mean.sic.day[sics.index[j], date.index[n, 3]] + ar1.sic.month[sics.index[j], date.index[n,2]] * x[n-1,j] + ar1.sic.day[sics.index[j], date.index[n,3]] * x[n-1,j] 
+     
       
-      # + gamma[sics.index[j]] * err[n-1,j]
-      #err[n,j] <- Y[n,j] - x[n,j] 
-
-      x[n,j] ~ dnorm(bld.mean[n,j] + sic.mean[n, j], phi.x[j])
+      x[n,j] ~ dnorm(bld.mean[n,j] + sic.mean[n,j], phi.x[j])
       Y[n,j] ~ dnorm(x[n,j], phi.y[j])
     }
   }
@@ -122,9 +128,9 @@ N.sics = length(unique(building.sics))
 data.dim = dim(y.matrix)
 N.obs = data.dim[1]
 N.buildings = data.dim[2]
-N.months = length(unique(timestamp.factors[,"month"]))
-N.years = length(unique(timestamp.factors[,"year"]))
-N.days = length(unique(timestamp.factors[,"day"]))
+N.months = max(unique(timestamp.factors[,"month"]))
+N.years = max(unique(timestamp.factors[,"year"]))
+N.days = max(unique(timestamp.factors[,"day"]))
 data <- list("Y" = y.matrix, 
              "Y0"= y.matrix[1,],
              "N.obs" = N.obs, 
@@ -136,29 +142,31 @@ data <- list("Y" = y.matrix,
              "N.days" = N.days,
              "N.sics" = N.sics)
 
-
-t(replicate(3, rnorm(2)))
-matrix(replicate(3, rnorm(1)), nrow=3, ncol=1)
-replicate(3, rnorm(2))
-
-inits <- list(list(alpha = matrix(replicate(N.buildings, rnorm(N.months, 0, 1e2)),
-                                  nrow=N.buildings, ncol=N.months), 
-                   mu = matrix(replicate(N.sics, rnorm(N.months, 0, 1e2)),
-                               nrow=N.sics, ncol=N.months),
-                   beta = matrix(replicate(N.sics, runif(N.months, 0, 1)),
-                                 nrow=N.sics, ncol=N.months)
-                   #gamma = matrix(replicate(N.sics, rnorm(N.months, 0, 1e5))
-                   #              nrow=N.sics, ncol=N.months), 
-                   ))
+inits <- list(list())
+#inits <- list(list(alpha = matrix(replicate(N.buildings, rnorm(N.months, 0, 1e2)),
+#                                  nrow=N.buildings, ncol=N.months), 
+#                   mu = matrix(replicate(N.sics, rnorm(N.months, 0, 1e2)),
+#                               nrow=N.sics, ncol=N.months),
+#                   beta = matrix(replicate(N.sics, runif(N.months, 0, 1)),
+#                                 nrow=N.sics, ncol=N.months)
+#                   #gamma = matrix(replicate(N.sics, rnorm(N.months, 0, 1e5))
+#                   #              nrow=N.sics, ncol=N.months), 
+#                   ))
                                                                    
-parameters <- c(names(inits[[1]]), "x", "phi.y", "phi.x")              
+#parameters <- c(names(inits[[1]]), "x", "phi.y", "phi.x")              
+parameters <- c("mean.sic.day", "mean.sic.month", 
+                "mean.bld.day", "mean.bld.month", 
+                "ar1.sic.day", "ar1.sic.month", 
+                "x", "phi.y", "phi.x")              
 
 options(error=NULL)
 
 n.samples <- 2000
+load.module("glm")
 model.sim <- jags(data, inits, parameters, model.file="energyARMA_model.bug",  
                   n.iter=n.samples, n.chains=1, DIC=F)
 model.sim <- autojags(model.sim)
+
 print(model.sim)
 
 #model.mcmc <- as.mcmc(model.sim)
@@ -177,22 +185,20 @@ state.plot.data = rbind(state.samples, y.matrix.melted)
 rm(state.samples)
 
 state.plot.data$obs = as.numeric(state.plot.data$obs)
-#state.plot.data$sample = as.factor(state.plot.data$sample)
-#state.plot.data$location_id = as.factor(state.plot.data$location_id)
-#state.plot.data$type = as.factor(state.plot.data$type)
+
 
 #
 # check out one location
 #
 state.predict.plot <- ggplot(subset(state.plot.data, 
-                                    location_id==2 & ((sample >= 1 & sample < 10) | sample==n.samples+1)), 
+                                    location_id==6 & ((sample >= 1 & sample < 100) | sample==n.samples+1)), 
                              aes(x=obs, y=kwh, group=type, colour=type)) +
   geom_path(aes(x=obs, y=kwh, group=sample, alpha=type)) + 
   scale_size_manual(values=c(1, 1.5)) +
   scale_alpha_manual(values=c(1, 0.3)) + 
   stat_summary(fun.y=mean, geom="line", alpha=1,
-               mapping=aes(group=type, linetype=type, colour=type)) + 
-  scale_y_log10()
+               mapping=aes(group=type, linetype=type, colour=type)) 
+  #+ scale_y_log10()
   #+ facet_grid(location_id ~ ., scale="free")
 
 #
@@ -207,8 +213,8 @@ pdf("state.predict.plot.pdf")
             scale_size_manual(values=c(1, 1.5)) +
             scale_alpha_manual(values=c(1, 0.3)) + 
             stat_summary(fun.y=mean, geom="line", alpha=1,
-                         mapping=aes(group=type, linetype=type, colour=type)) + 
-            scale_y_log10()
+                         mapping=aes(group=type, linetype=type, colour=type)) 
+            #+ scale_y_log10()
           print(state.predict.plot)  
         }, .progress="text")
 dev.off()
