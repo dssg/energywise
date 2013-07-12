@@ -76,14 +76,25 @@ def get_stats(d):
      days, new_times = get_periods(d, 24, is_midnight, "kwhs")
      avg_day         = np.average(days, axis=0)
      weirdness       = []
+     totals          = []
+
      for day in days:
+          total = np.sum(day)
+          totals.append(total)
           dist = np.average(np.abs(day - avg_day))
           weirdness.append(dist)
      ind           = np.argmax(weirdness)
      weirdest_date = new_times[ind][0]
      weirdest_vals = days[ind]
 
+     ind = np.argmax(totals)
+     highest_day = new_times[ind][0]
+     
+     ind = np.argmin(totals)
+     lowest_day = new_times[ind][0]
 
+     report += "\nHighest day: " + highest_day.strftime("%m/%d/%Y")
+     report += "\nLowest day: " + lowest_day.strftime("%m/%d/%Y")
      report += "\nStrangest day: " + weirdest_date.strftime("%m/%d/%Y")
      #plt.plot(weirdest_vals, label = weirdest_date.strftime("%m/%d/%Y"))
      #plt.plot(avg_day,       label = "Average day")
