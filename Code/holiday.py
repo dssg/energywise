@@ -46,4 +46,10 @@ def is_hol(date):
         return False
     
 if __name__ == "__main__":
-    print True
+    d=datetime.now()
+    d1=date(2013,11,28)
+    d2=datetime(2013,11,28,12,20,30)
+    is_hol(d1)
+    is_hol(d2)
+    is_hol(d)
+    
