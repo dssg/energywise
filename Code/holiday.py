@@ -37,10 +37,13 @@ def yfhol(year):
 def is_hol(date):
     """Recieve a date.
        Returns True if holiday."""
+    if isinstance(date,datetime):
+        date=date.date()
     hols = yfhol(date.year)
     if date in hols.values():
         return True
     else:
         return False
     
-
+if __name__ == "__main__":
+    print True
