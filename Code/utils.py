@@ -1,5 +1,6 @@
 import cPickle as pickle
 data_loc = "../Data/"
+data_loc = "C:/Users/Scott/Data/"
 fig_loc = "../Figs/"
 
 def qload(finn, loc = ""):

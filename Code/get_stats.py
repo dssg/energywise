@@ -108,7 +108,6 @@ def get_stats(d):
      for week in weeks:
           dist = np.average(np.abs(week - avg_week))
           weirdness.append(dist)
-     ind   = np.argmax(weirdness)
      inds  = np.argsort(weirdness)[-5:][::-1]
 
      report += "\nStrangest weeks:\n"
@@ -118,17 +117,19 @@ def get_stats(d):
           weirdest_vals       = weeks[ind]
           week_as_string      = weirdest_date_start.strftime("%m/%d/%Y") + "--" +  weirdest_date_end.strftime("%m/%d/%Y")
           report             += "\t" + week_as_string + "\n"
-          #plt.plot(weirdest_vals, label = week_as_string)
-     #plt.plot(avg_week,      label = "Average week")
-     #plt.legend()
-     #plt.show()
 
+     report += "\nPeaks:\n"
+     inds  = np.argsort(ori_kwhs)[-5:][::-1]
+     for ind in inds:
+          highest_date = (times[kwhs_oriflag])[ind]
+          highest_val = ori_kwhs[ind]
+          report += "\t" + highest_date.strftime("%m/%d/%Y %H:%M:%S") + " -> " + str(highest_val) + "kwh\n"
      return report
 
 
 if __name__ == "__main__":
-        #data, desc = qload("agentis_b_records_2011_updated_small.pkl")
-    data, desc = qload("agentis_b_records_2011_updated.pkl")
+    data, desc = qload("agentis_b_records_2011_updated_small.pkl")
+    #data, desc = qload("agentis_b_records_2011_updated.pkl")
     sys.stdout.flush()
     #data = [data[-1]]
     print "Data desc:", desc

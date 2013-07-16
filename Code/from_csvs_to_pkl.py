@@ -1,3 +1,4 @@
+from os import listdir
 from    utils import data_loc, fig_loc, qload, qdump
 from    utils import fill_in, daterange
 from    collections import defaultdict
@@ -36,7 +37,8 @@ def get_default_for_map():
 def get_desc_map():
     '''This function uses Examples.csv to make  desc_map.pkl -- a file containing the description map. The description map is a dictionary mapping building id (int) to a (sic, building type) pair (int, string).'''
 
-    finn_desc = data_loc + "Agentis/Examples" + alt_str + ".csv"
+    #finn_desc = data_loc + "Agentis/Examples" + alt_str + ".csv"
+    finn_desc = data_loc + "location_business_types.csv"
     fin_desc  = open(finn_desc)
     desc_map  = {}
     dummy     = fin_desc.readline() #skip header info
@@ -58,17 +60,23 @@ def get_desc_map():
     qdump((desc_map, desc), "desc_map" + alt_str + ".pkl")
     
 def make_data_pkl():
+
+    filenames = [data_loc + "Agentis_Full/" + x for x in listdir(data_loc + "Agentis_Full") if
+                 ".csv" in x]
+
     desc_map, desc = qload("desc_map" + alt_str + ".pkl")
     records        = []
     #fnums         = [15007, 150]
-    fnums          =  [150] + [1500 + i for i in range(10)] + [15000 + i for i in range(100)]
-
+    #fnums          =  [150] + [1500 + i for i in range(10)] + [15000 + i for i in range(100)]
+    fnums = [17002]
     
-    for fnum in fnums:
+    #for fnum in fnums:
+    for finn in filenames:
         kwhs  = []
         temps = []
+        fnum  = int(finn.rstrip(".Rdata.csv"))
 
-        finn  = data_loc + "Agentis/" + str(fnum) + ".csv"
+        #finn  = data_loc + "Agentis_Full/" + str(fnum) + ".Rdata.csv"
         fin   = open(finn)
         fin.readline()#ignore header
         for l in fin:
@@ -143,5 +151,5 @@ def make_data_pkl():
 
 
 if __name__ == "__main__":
-    get_desc_map()
+    #get_desc_map()
     make_data_pkl()

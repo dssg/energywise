@@ -214,9 +214,44 @@ def make_hist_fig(d, hist):
     hist.hist(kwhs[kwhs_oriflag], bins = 50)
     hist.set_title("Histogram of Energy Usage")
     hist.set_ylabel("kwhs")
+
+def gen_peaks(d, num_peaks = 3):
+    bid                  = d["bid"]
+    sic                  = d["sic"]
+    btype                = d["btype"]
+    times                = d["times"]
+    kwhs, kwhs_oriflag   = d["kwhs"]
+    temps, temps_oriflag = d["temps"]
+    
+    inds = np.argsort(kwhs)[-num_peaks:]
+    for ind in inds:
+        yield ind
+
+def make_peak_fig(d, ax, ind):
+    bid                  = d["bid"]
+    sic                  = d["sic"]
+    btype                = d["btype"]
+    times                = d["times"]
+    kwhs, kwhs_oriflag   = d["kwhs"]
+    temps, temps_oriflag = d["temps"]
+ 
+    highest_date = times[ind]
+    highest_val  = kwhs[ind]
+    leftmost  = max(0, ind-12)
+    rightmost = min(len(kwhs), ind+12)
+    ax.plot(kwhs[leftmost:rightmost], alpha = 0.5)
     
 def plot_it(d):
     bid = d["bid"]
+
+    fig2 = plt.figure(figsize = (10, 10))
+    peaks = fig2.add_subplot(1, 1, 1)
+    peaksgen = gen_peaks(d, 3)
+    for p in peaksgen:
+        print p
+        make_peak_fig(d, peaks, p)
+    plt.show()
+    exit()
     fig = plt.figure(figsize = (20, 20))
     
     nrows    = 4
@@ -244,9 +279,11 @@ def plot_it(d):
     plt.close()
     
     
+
+        
 if __name__ == "__main__":
-    #data, desc = qload("agentis_b_records_2011_updated_small.pkl")
-    data, desc = qload("agentis_b_records_2011_updated.pkl")
+    data, desc = qload("agentis_b_records_2011_updated_small.pkl")
+    #data, desc = qload("agentis_b_records_2011_updated.pkl")
     sys.stdout.flush()
     #data = [data[-1]]
     print "Data desc:", desc

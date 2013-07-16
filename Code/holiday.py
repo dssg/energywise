@@ -49,7 +49,7 @@ if __name__ == "__main__":
     d=datetime.now()
     d1=date(2013,11,28)
     d2=datetime(2013,11,28,12,20,30)
-    is_hol(d1)
-    is_hol(d2)
-    is_hol(d)
+    print is_hol(d1)
+    print is_hol(d2)
+    print is_hol(d)
     
