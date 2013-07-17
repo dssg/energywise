@@ -40,7 +40,7 @@ def get_periods(d, nobs, first_pred, which = "kwhs", skip_fun = (lambda x: False
 
 def make_text_fig(d, textfig):
     bid                  = d["bid"]
-    naics                  = d["naics"]
+    naics                = d["naics"]
     btype                = d["btype"]
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
@@ -59,11 +59,7 @@ def make_text_fig(d, textfig):
     textfig.set_yticks([])
     
 def make_temp_vs_time_fig(d, tvt):
-    bid                  = d["bid"]
-    naics                  = d["naics"]
-    btype                = d["btype"]
     times                = d["times"]
-    kwhs, kwhs_oriflag   = d["kwhs"]
     temps, temps_oriflag = d["temps"]
     
     tvt.plot(   times[temps_oriflag] , temps[temps_oriflag] , c = "blue")
@@ -78,12 +74,8 @@ def make_temp_vs_time_fig(d, tvt):
         
 
 def make_kwhs_vs_time_fig(d, tvk):
-    bid                  = d["bid"]
-    naics                  = d["naics"]
-    btype                = d["btype"]
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
-    temps, temps_oriflag = d["temps"]
 
     tvk.plot(times[kwhs_oriflag], kwhs[kwhs_oriflag], c = "blue", label = "Energy Usage")
     tvk.scatter(times[~kwhs_oriflag], kwhs[~kwhs_oriflag], c = "red", lw = 0, label = "Imputed Values")
@@ -100,9 +92,6 @@ def make_kwhs_vs_time_fig(d, tvk):
         label.set_rotation(30) 
 
 def make_freqs_fig(d, freqs):
-    bid                  = d["bid"]
-    naics                  = d["naics"]
-    btype                = d["btype"]
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
     temps, temps_oriflag = d["temps"]
@@ -139,10 +128,6 @@ def make_freqs_fig(d, freqs):
         label.set_rotation(30) 
 
 def make_temp_vs_kwh_fig(d, tmpsvk):
-    bid                  = d["bid"]
-    naics                  = d["naics"]
-    btype                = d["btype"]
-    times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
     temps, temps_oriflag = d["temps"]
 
@@ -206,36 +191,22 @@ def make_avg_week_fig(d, avgweek):
     avgweek.legend()
 
 def make_hist_fig(d, hist):
-    bid                  = d["bid"]
-    naics                  = d["naics"]
-    btype                = d["btype"]
-    times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
-    temps, temps_oriflag = d["temps"]
     
     hist.hist(kwhs[kwhs_oriflag], bins = 50)
     hist.set_title("Histogram of Energy Usage")
     hist.set_ylabel("kwhs")
 
 def gen_peaks(d, num_peaks = 3):
-    bid                  = d["bid"]
-    naics                  = d["naics"]
-    btype                = d["btype"]
-    times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
-    temps, temps_oriflag = d["temps"]
     
     inds = np.argsort(kwhs)[-num_peaks:]
     for ind in inds:
         yield ind
 
 def make_peak_fig(d, ax, ind):
-    bid                  = d["bid"]
-    naics                  = d["naics"]
-    btype                = d["btype"]
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
-    temps, temps_oriflag = d["temps"]
  
     highest_date = times[ind]
     highest_val  = kwhs[ind]
@@ -272,7 +243,7 @@ def make_kwh_vs_sun_fig(d, ax):
         return math.sin(alt)
 
     bid                  = d["bid"]
-    naics                  = d["naics"]
+    naics                = d["naics"]
     btype                = d["btype"]
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
