@@ -21,6 +21,7 @@ def qdump(var, foutn, loc = ""):
     print "Saving", foutn +"...."
     fout = open(foutn, "wb")
     pickle.dump(var, fout)
+    fout.close()
     print "\tSaved"
 
 def interp(all_times, base_val):

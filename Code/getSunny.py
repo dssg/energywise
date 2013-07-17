@@ -52,16 +52,10 @@ results=[getSun("IL",d) for d in dayTimes]
 
 t=[]
 y=[]
-plt.figure()
 
 for d in dayTimes:
 	t.append(d)
 	y.append(getSun('IL',d))
-plt.plot(t,y,'.r')
-locs,labels=plt.xticks()
-plt.setp(labels,rotation=30)
-plt.savefig("/home/csimoiu/sun-IL.pdf")
-   
 
 k=[u'America/New_York',
  u'America/Detroit',

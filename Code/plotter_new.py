@@ -1,3 +1,5 @@
+import  ephem
+import  math
 import  sys
 from    utils import *
 import  numpy as np
@@ -38,14 +40,14 @@ def get_periods(d, nobs, first_pred, which = "kwhs", skip_fun = (lambda x: False
 
 def make_text_fig(d, textfig):
     bid                  = d["bid"]
-    sic                  = d["sic"]
+    naics                  = d["naics"]
     btype                = d["btype"]
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
     temps, temps_oriflag = d["temps"]
     
     toPrint =  "ID:\n   "   + str(bid)\
-        + "\nSic:\n   "     + str(sic)\
+        + "\nNaics:\n   "     + str(naics)\
         + "\nType:\n   "    + str(btype)\
         + "\nAverage Hourly Energy Usage:\n    " + str(np.round(np.average(kwhs), 2)) + "kw"\
         + "\nMin:\n    "    + str(np.round(np.min(kwhs), 2))\
@@ -58,7 +60,7 @@ def make_text_fig(d, textfig):
     
 def make_temp_vs_time_fig(d, tvt):
     bid                  = d["bid"]
-    sic                  = d["sic"]
+    naics                  = d["naics"]
     btype                = d["btype"]
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
@@ -77,7 +79,7 @@ def make_temp_vs_time_fig(d, tvt):
 
 def make_kwhs_vs_time_fig(d, tvk):
     bid                  = d["bid"]
-    sic                  = d["sic"]
+    naics                  = d["naics"]
     btype                = d["btype"]
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
@@ -99,7 +101,7 @@ def make_kwhs_vs_time_fig(d, tvk):
 
 def make_freqs_fig(d, freqs):
     bid                  = d["bid"]
-    sic                  = d["sic"]
+    naics                  = d["naics"]
     btype                = d["btype"]
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
@@ -138,7 +140,7 @@ def make_freqs_fig(d, freqs):
 
 def make_temp_vs_kwh_fig(d, tmpsvk):
     bid                  = d["bid"]
-    sic                  = d["sic"]
+    naics                  = d["naics"]
     btype                = d["btype"]
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
@@ -205,7 +207,7 @@ def make_avg_week_fig(d, avgweek):
 
 def make_hist_fig(d, hist):
     bid                  = d["bid"]
-    sic                  = d["sic"]
+    naics                  = d["naics"]
     btype                = d["btype"]
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
@@ -217,7 +219,7 @@ def make_hist_fig(d, hist):
 
 def gen_peaks(d, num_peaks = 3):
     bid                  = d["bid"]
-    sic                  = d["sic"]
+    naics                  = d["naics"]
     btype                = d["btype"]
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
@@ -229,7 +231,7 @@ def gen_peaks(d, num_peaks = 3):
 
 def make_peak_fig(d, ax, ind):
     bid                  = d["bid"]
-    sic                  = d["sic"]
+    naics                  = d["naics"]
     btype                = d["btype"]
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
@@ -240,10 +242,53 @@ def make_peak_fig(d, ax, ind):
     leftmost  = max(0, ind-12)
     rightmost = min(len(kwhs), ind+12)
     ax.plot(kwhs[leftmost:rightmost], alpha = 0.5)
+
+def make_kwh_vs_sun_fig(d, ax):
+    states=pickle.load(open('stateDB.pickle','r'))    
+    o = ephem.Observer()
+    def getSun(stateID,currentTime,city=None):
+        # stateID is a string abbreviation of the state name, ie "IL","AZ",etc.
+        # currentTime is local time with tzinfo = state time zone
+        # city is optional (defaults to state capital if missing or not found in database)
+        # returns sin(altitude) 
+        # altitude,azimuth are given in radians
+        
+        stateID.capitalize()
+        dateStamp=currentTime.astimezone(pytz.utc)
+        
+        if city is None:
+            city=states[stateID]['capital']        
+        else:
+            try:
+                city=states[stateID][city].capitalize()
+            except:
+                city=states[stateID]['capital'] 
+                
+        o.lat    = states[stateID][city][0]
+        o.long   = states[stateID][city][1]
+        o.date   = dateStamp
+        sun = ephem.Sun(o)
+        alt=sun.alt
+        return math.sin(alt)
+
+    bid                  = d["bid"]
+    naics                  = d["naics"]
+    btype                = d["btype"]
+    times                = d["times"]
+    kwhs, kwhs_oriflag   = d["kwhs"]
+    temps, temps_oriflag = d["temps"]
+
+    sun_pos = np.array([max(-100, getSun("IL", t)) for t in times[kwhs_oriflag]])
+    ax.hist2d(kwhs[kwhs_oriflag], sun_pos, bins = 50, norm = LogNorm())
     
+    ax.set_title("Energy Usage vs sunlight")
+    ax.set_xlabel("kwh")
+    ax.set_ylabel("Sunlight")
+    ax.grid(True)
+
 def plot_it(d):
     bid = d["bid"]
-
+    '''
     fig2 = plt.figure(figsize = (10, 10))
     peaks = fig2.add_subplot(1, 1, 1)
     peaksgen = gen_peaks(d, 3)
@@ -251,7 +296,8 @@ def plot_it(d):
         print p
         make_peak_fig(d, peaks, p)
     plt.show()
-    exit()
+    '''
+    
     fig = plt.figure(figsize = (20, 20))
     
     nrows    = 4
@@ -274,7 +320,7 @@ def plot_it(d):
     make_avg_day_fig(d, avgday)
     make_avg_week_fig(d, avgweek)
     plt.subplots_adjust(hspace = .35)
-    plt.savefig(fig_loc + "sixfig_" + str(bid) + "_2011.png")
+    plt.savefig(fig_loc + "fig_" + str(bid) + "_2011.png")
     plt.clf()
     plt.close()
     
@@ -282,8 +328,10 @@ def plot_it(d):
 
         
 if __name__ == "__main__":
-    data, desc = qload("agentis_b_records_2011_updated_small.pkl")
+    #data, desc = qload("agentis_b_records_2011_updated_small.pkl")
     #data, desc = qload("agentis_b_records_2011_updated.pkl")
+    data, desc = qload("agentis_allyears_19870_updated.pkl")
+    data = [data]
     sys.stdout.flush()
     #data = [data[-1]]
     print "Data desc:", desc
