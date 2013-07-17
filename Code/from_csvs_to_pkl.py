@@ -35,7 +35,7 @@ def get_default_for_map():
     return (0, 0)
 
 def get_desc_map():
-    '''This function uses Examples.csv to make  desc_map.pkl -- a file containing the description map. The description map is a dictionary mapping building id (int) to a (sic, building type) pair (int, string).'''
+    '''This function uses Examples.csv to make  desc_map.pkl -- a file containing the description map. The description map is a dictionary mapping building id (int) to a (naics, building type) pair (int, string).'''
 
     #finn_desc = data_loc + "Agentis/Examples" + alt_str + ".csv"
     finn_desc = data_loc + "location_business_types.csv"
@@ -46,23 +46,23 @@ def get_desc_map():
     for l in fin_desc:
         line    = map(string.strip, l.split(","))
         line    = [string.strip(x, '"') for x in line]
-        loc_id, sic, btype = tuple(line)
+        loc_id, naics, btype = tuple(line)
         loc_id  = int(loc_id)
-        if sic == "NULL":
-            sic = 0
+        if naics == "NULL":
+            naics = 0
         else:
-            sic = int(sic)
-        desc_map[loc_id] = (sic, btype)
+            naics = int(naics)
+        desc_map[loc_id] = (naics, btype)
 
-    desc = "This dictionary (defaultdict) maps <loc_id> to a (<sic_code>, <business_type>) pair. Values not in the dictionary are mapped to (0, 0)."
+    desc = "This dictionary (defaultdict) maps <loc_id> to a (<naics_code>, <business_type>) pair. Values not in the dictionary are mapped to (0, 0)."
 
     desc_map = defaultdict(get_default_for_map, desc_map)
     qdump((desc_map, desc), "desc_map" + alt_str + ".pkl")
     
 def make_data_pkl():
 
-    filenames = [data_loc + "Agentis_Full/" + x for x in listdir(data_loc + "Agentis_Full") if
-                 ".csv" in x]
+    filenames = [x for x in\
+                     listdir(data_loc + "Agentis_Full") if ".csv" in x]
 
     desc_map, desc = qload("desc_map" + alt_str + ".pkl")
     records        = []
@@ -72,12 +72,13 @@ def make_data_pkl():
     
     #for fnum in fnums:
     for finn in filenames:
+        print "Processing:", finn
         kwhs  = []
         temps = []
         fnum  = int(finn.rstrip(".Rdata.csv"))
 
         #finn  = data_loc + "Agentis_Full/" + str(fnum) + ".Rdata.csv"
-        fin   = open(finn)
+        fin   = open(data_loc + "Agentis_Full/" + finn)
         fin.readline()#ignore header
         for l in fin:
             ind, time_stamp, kwh, v3, temp, date = (0, 0, 0, 0, 0, "0") #just to reset to be safe
@@ -121,12 +122,15 @@ def make_data_pkl():
                     temp = float(temp)
                     temps.append((time_stamp, temp))
 
-        fsic, fbtype = desc_map[fnum]
+        fnaics, fbtype = desc_map[fnum]
         start_date   = datetime.strptime("1/1/2011 00:00:00", "%m/%d/%Y %H:%M:%S").replace(tzinfo = tz_used)
         
 
         full_year_times = \
             [(start_date + rdatetime.timedelta(hours = n)) for n in range(8760)]
+        if len(temps) == 0 or len(kwhs) == 0:
+            print "Empty time series found"
+            continue
         full_temps, temps_oriflag = fill_in(temps, full_year_times)
         full_kwhs, kwhs_oriflag   = fill_in(kwhs, full_year_times)
 
@@ -134,7 +138,7 @@ def make_data_pkl():
         kwh_times,  kwh_vals  = zip(*full_kwhs)
         record = {
             "bid"      : fnum,
-            "sic"      : fsic,
+            "naics"    : fnaics,
             "btype"    : fbtype,
             "times"    : np.array(full_year_times),
             "kwhs"     : (np.array(kwh_vals), np.array(kwhs_oriflag)),
@@ -144,12 +148,12 @@ def make_data_pkl():
     print len(records), "records recorded."
     desc = "This is a list of Building Records."
     
-    if only_one_year: foutn = "agentis_b_records_2011" + alt_str + ".pkl"
+    if only_one_year: foutn = "agentis_full_b_records_2011" + alt_str + ".pkl"
     else: foutn             = "agentis_b_records" + alt_str + ".pkl"
 
     qdump((records, desc), foutn)
 
 
 if __name__ == "__main__":
-    #get_desc_map()
+    get_desc_map()
     make_data_pkl()

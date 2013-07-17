@@ -1,6 +1,7 @@
+import numpy as np
 import cPickle as pickle
-data_loc = "../Data/"
-data_loc = "C:/Users/Scott/Data/"
+#data_loc = "../Data/"
+data_loc = "/mnt/energy_data/Data/"
 fig_loc = "../Figs/"
 
 def qload(finn, loc = ""):
@@ -9,8 +10,10 @@ def qload(finn, loc = ""):
         loc = data_loc
     finn= loc + finn
     print "Loading", finn +"...."
-    toR = pickle.load(open(finn))
+    fin = open(finn)
+    toR = pickle.load(fin)
     print "\tLoaded"
+    fin.close()
     return toR
 
 def qdump(var, foutn, loc = ""):
