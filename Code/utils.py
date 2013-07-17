@@ -10,8 +10,10 @@ def qload(finn, loc = ""):
         loc = data_loc
     finn= loc + finn
     print "Loading", finn +"...."
-    toR = pickle.load(open(finn))
+    fin = open(finn)
+    toR = pickle.load(fin)
     print "\tLoaded"
+    fin.close()
     return toR
 
 def qdump(var, foutn, loc = ""):
@@ -22,6 +24,7 @@ def qdump(var, foutn, loc = ""):
     print "Saving", foutn +"...."
     fout = open(foutn, "wb")
     pickle.dump(var, fout)
+    fout.close()
     print "\tSaved"
 
 def interp(all_times, base_val):
