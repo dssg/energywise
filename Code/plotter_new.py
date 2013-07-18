@@ -58,6 +58,7 @@ def make_text_fig(d, textfig):
     textfig.set_xticks([])
     textfig.set_yticks([])
     
+
 def make_temp_vs_time_fig(d, tvt):
     times                = d["times"]
     temps, temps_oriflag = d["temps"]
@@ -90,6 +91,7 @@ def make_kwhs_vs_time_fig(d, tvk):
     labels = tvk.get_xticklabels() 
     for label in labels: 
         label.set_rotation(30) 
+
 
 def make_freqs_fig(d, freqs):
     times                = d["times"]
@@ -127,6 +129,7 @@ def make_freqs_fig(d, freqs):
     for label in labels: 
         label.set_rotation(30) 
 
+
 def make_temp_vs_kwh_fig(d, tmpsvk):
     kwhs, kwhs_oriflag   = d["kwhs"]
     temps, temps_oriflag = d["temps"]
@@ -163,11 +166,12 @@ def make_avg_day_fig(d, avgday):
     avgday.errorbar(np.arange(24), avg_day,     yerr =std_day,     label = "Day")
 
     avgday.set_title("Average Day")
-    avgday.set_ylabel("Temperature (F) / Energy Usage (kwh)")
+    avgday.set_ylabel("Energy Usage (kwh)")
     avgday.set_xlim(-0.5, 24.5)
     avgday.set_xticks(range(0, 24, 4))
     avgday.grid(True)
     avgday.legend()
+
 
 def make_avg_week_fig(d, avgweek):
     is_sunday_start  = (lambda x: x.weekday() == 6 and x.hour == 0)
@@ -176,7 +180,7 @@ def make_avg_week_fig(d, avgweek):
     avg_week  = np.ma.average(weeks, axis = 0)
     std_week  = np.ma.std(weeks, axis = 0)
 
-    avgweek.errorbar(np.arange(168), avg_week, yerr =std_week, label = "Week", errorevery = 6)
+    avgweek.errorbar(np.arange(168), avg_week, yerr =std_week, label = "Energy Usage", errorevery = 6)
 
     avgweek.set_title("Average Week")
     avgweek.set_ylabel("Temperature (F) / Energy Usage (kwh)")
@@ -190,6 +194,7 @@ def make_avg_week_fig(d, avgweek):
     avgweek.grid(True)
     avgweek.legend()
 
+
 def make_hist_fig(d, hist):
     kwhs, kwhs_oriflag   = d["kwhs"]
     
@@ -197,12 +202,14 @@ def make_hist_fig(d, hist):
     hist.set_title("Histogram of Energy Usage")
     hist.set_ylabel("kwhs")
 
+
 def gen_peaks(d, num_peaks = 3):
     kwhs, kwhs_oriflag   = d["kwhs"]
     
     inds = np.argsort(kwhs)[-num_peaks:]
     for ind in inds:
         yield ind
+
 
 def make_peak_fig(d, ax, ind):
     times                = d["times"]
@@ -213,6 +220,7 @@ def make_peak_fig(d, ax, ind):
     leftmost  = max(0, ind-12)
     rightmost = min(len(kwhs), ind+12)
     ax.plot(kwhs[leftmost:rightmost], alpha = 0.5)
+
 
 def make_kwh_vs_sun_fig(d, ax):
     states=pickle.load(open('stateDB.pickle','r'))    
@@ -257,18 +265,103 @@ def make_kwh_vs_sun_fig(d, ax):
     ax.set_ylabel("Sunlight")
     ax.grid(True)
 
+def make_monthly_usage_fig(d, ax):
+    bid                  = d["bid"]
+    naics                = d["naics"]
+    btype                = d["btype"]
+    times                = d["times"]
+    kwhs, kwhs_oriflag   = d["kwhs"]
+    temps, temps_oriflag = d["temps"]
+
+    month_breaks = [ind for ind, t in enumerate(times) if t.day == 1 and t.hour == 0]
+
+    zeroed_kwhs  = [k if flg else 0 for k, flg in zip(kwhs, kwhs_oriflag)] 
+    month_totals = [np.sum(zeroed_kwhs[s:e]) for s, e in zip(month_breaks, month_breaks[1:] + [-1])]
+    
+    ax.bar([times[i] for i in month_breaks], month_totals, width = 10)
+    labels = ax.get_xticklabels() 
+    for label in labels: 
+        label.set_rotation(30) 
+    ax.set_title("Monthly Energy Usage")
+    ax.set_ylabel("kwhs")
+    ax.grid(True)
+
+def gen_strange_pers(d, num_pers = 3, period = "day"):
+    kwhs, kwhs_oriflag = d["kwhs"]
+
+    if period == "day":
+        first_pred = (lambda x: x.hour == 0)
+    elif period == "week":
+        first_pred = (lambda x: x.weekday() == 0 and x.hour == 0)
+    else:
+        print "period must be 'day' or 'week'."
+        return
+    num_per_period = 24 if period == "day" else 168
+    pers, new_times = get_periods(d, num_per_period, first_pred, "kwhs")
+    pers = pers[1:-2] #used as a hack to fix the wrap-around issue
+    avg_per         = np.average(pers, axis=0)
+    weirdness       = []
+    totals          = []
+    
+    standardize = True
+    if standardize:
+        avg_per = avg_per - np.min(avg_per)
+        avg_per = avg_per / np.max(avg_per)
+
+    for per in pers:
+        if standardize:
+            per = per - np.min(per)
+            per = per / np.max(per)
+
+        dist = np.average(np.abs(per - avg_per))        
+        weirdness.append(dist)
+    inds = np.argsort(weirdness)[-num_pers:][::-1]
+    for ind in inds:
+        vals = pers[ind]
+        times = new_times[ind]
+        yield vals, times
+        
+
+def make_strange_per_fig(d, ax, per):
+    vals, new_times = per
+    ax.plot(new_times, vals)
+    ax.set_title("Beginning " + new_times[0].strftime("%m/%d/%Y"))
+    ax.set_ylabel("kwhs")
+    labels = ax.get_xticklabels() 
+    for label in labels: 
+        label.set_rotation(30) 
+    
+
+def make_extreme_days_figs(d, axhigh, axlow):
+    is_midnight     = (lambda x: x.hour == 0)
+    days, new_times = get_periods(d, 24, is_midnight, "kwhs")
+    avg_day         = np.average(days, axis=0)
+    weirdness       = []
+    totals          = []
+    
+    for day in days:
+        total = np.sum(day)
+        totals.append(total)
+        dist = np.average(np.abs(day - avg_day))
+        weirdness.append(dist)
+    ind = np.argmax(totals)
+    highest_day = new_times[ind][0]
+    axhigh.plot(new_times[ind], days[ind])
+    axhigh.set_title("Highest Day\n" + highest_day.strftime("%m/%d/%Y"))
+    labels = axhigh.get_xticklabels() 
+    for label in labels: 
+        label.set_rotation(30) 
+
+    ind = np.argmin(totals)
+    lowest_day = new_times[ind][0]
+    axlow.plot(new_times[ind], days[ind])
+    axlow.set_title("Lowest Day\n" + lowest_day.strftime("%m/%d/%Y"))
+    labels = axlow.get_xticklabels() 
+    for label in labels: 
+        label.set_rotation(30) 
+  
 def plot_it(d):
     bid = d["bid"]
-    '''
-    fig2 = plt.figure(figsize = (10, 10))
-    peaks = fig2.add_subplot(1, 1, 1)
-    peaksgen = gen_peaks(d, 3)
-    for p in peaksgen:
-        print p
-        make_peak_fig(d, peaks, p)
-    plt.show()
-    '''
-    
     fig = plt.figure(figsize = (20, 20))
     
     nrows    = 4
@@ -295,13 +388,68 @@ def plot_it(d):
     plt.clf()
     plt.close()
     
-    
 
-        
+def test_things(d):
+    bid = d["bid"]
+    '''
+    fig = plt.figure(figsize = (10, 10))
+    ax1 = fig.add_subplot(1, 2, 1)
+    ax2 = fig.add_subplot(1, 2, 2)
+
+    make_extreme_days_figs(d, ax1, ax2)
+    plt.show()
+    exit()
+
+    '''    
+
+    fig2 = plt.figure(figsize = (20, 20))
+    weeks = gen_strange_pers(d, 6, period = "week")
+    weeks.next()
+    for i, p in enumerate(weeks):
+        week_fig = fig2.add_subplot(3, 3, i + 1)
+        make_strange_per_fig(d, week_fig, p)
+
+    avg_week = fig2.add_subplot(4, 1, 4)
+    make_avg_week_fig(d, avg_week)
+    plt.show()
+    exit()
+
+    fig2 = plt.figure(figsize = (20, 20))
+    days = gen_strange_pers(d, 6, period = "day")
+
+
+    for i, p in enumerate(days):
+        day_fig = fig2.add_subplot(3, 3, i + 1)
+        make_strange_per_fig(d, day_fig, p)
+
+    avg_day = fig2.add_subplot(4, 1, 4)
+    make_avg_day_fig(d, avg_day)
+    plt.show()
+    exit()
+
+
+    fig2  = plt.figure(figsize = (10, 10))
+    peaks = fig2.add_subplot(1, 1, 1)
+    peaksgen = gen_peaks(d, 3)
+    for p in peaksgen:
+        print p
+        make_peak_fig(d, peaks, p)
+    plt.show()
+    exit()
+    
+    fig    = plt.figure(figsize = (20, 20))
+    totals = fig.add_subplot(1, 1, 1)
+    make_monthly_usage_fig(d, totals)
+    plt.show()
+    exit()
+
 if __name__ == "__main__":
     #data, desc = qload("agentis_b_records_2011_updated_small.pkl")
     #data, desc = qload("agentis_b_records_2011_updated.pkl")
-    data, desc = qload("agentis_allyears_19870_updated.pkl")
+    #data, desc = qload("agentis_allyears_19870_updated.pkl")
+    #data, desc = qload("agentis_allyears_18400_updated.pkl")
+    #data, desc = qload("agentis_allyears_21143_updated.pkl")
+    data, desc = qload("agentis_allyears_22891_updated.pkl")
     data = [data]
     sys.stdout.flush()
     #data = [data[-1]]
@@ -310,6 +458,8 @@ if __name__ == "__main__":
     print "vals for point 0:", len(data[0]["times"])
     print "\n"
     for ind, d in enumerate(data):
+        test_things(d)
+        exit()
         plot_it(d)
         bid = d["bid"]
         print str(ind), ": plotted something..."

@@ -50,7 +50,6 @@ def get_stats(d):
      zeroed_kwhs  = [k if flg else 0 for k, flg in zip(kwhs, kwhs_oriflag)]
      
      month_totals = [np.sum(zeroed_kwhs[s:e]) for s, e in zip(month_breaks, month_breaks[1:] + [-1])]
-     month_totals = [np.sum(zeroed_kwhs[s:e]) for s, e in zip(month_breaks, month_breaks[1:] + [-1])]
    
      report  = "-"*10 + "Building Report:" + "-"*10 \
          + "\nID:\n"        + "\t"*2       + str(bid).ljust(20)\
