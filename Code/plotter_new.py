@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 import  ephem
 import  math
 import  sys
@@ -13,7 +15,7 @@ import  heapq
 utc_tz  = pytz.utc
 tz_used = pytz.timezone("US/Central")
 
-def get_periods(d, nobs, first_pred, which = "kwhs", skip_fun = (lambda x: False)):
+def get_periods(d, nobs, first_pred, which = "kwhs", skip_fun = (lambda x: False), wrap_around = False):
     times                  = d["times"]
     series, series_oriflag = d[which]
     
@@ -26,9 +28,13 @@ def get_periods(d, nobs, first_pred, which = "kwhs", skip_fun = (lambda x: False
         if first_pred(t):
             first = ind
             break
-    pers      = np.ma.concatenate([masked_series[first:], masked_series[:first]])
-    new_times = np.ma.concatenate([times[first:], times[:first]])
-    
+    if wrap_around:
+        pers      = np.ma.concatenate([masked_series[first:], masked_series[:first]])
+        new_times = np.ma.concatenate([times[first:], times[:first]])
+    else:
+        pers      = masked_series[first:]
+        new_times = times[first:]
+
     residue = len(pers) % nobs
     if residue != 0:
         pers      = pers[:-residue]#trim off extra
@@ -37,6 +43,7 @@ def get_periods(d, nobs, first_pred, which = "kwhs", skip_fun = (lambda x: False
     pers      = pers.reshape(-1, nobs)
     new_times = new_times.reshape(-1, nobs)
     return pers, new_times
+
 
 def make_text_fig(d, textfig):
     bid                  = d["bid"]
@@ -265,6 +272,7 @@ def make_kwh_vs_sun_fig(d, ax):
     ax.set_ylabel("Sunlight")
     ax.grid(True)
 
+
 def make_monthly_usage_fig(d, ax):
     bid                  = d["bid"]
     naics                = d["naics"]
@@ -286,6 +294,7 @@ def make_monthly_usage_fig(d, ax):
     ax.set_ylabel("kwhs")
     ax.grid(True)
 
+
 def gen_strange_pers(d, num_pers = 3, period = "day"):
     kwhs, kwhs_oriflag = d["kwhs"]
 
@@ -298,7 +307,7 @@ def gen_strange_pers(d, num_pers = 3, period = "day"):
         return
     num_per_period = 24 if period == "day" else 168
     pers, new_times = get_periods(d, num_per_period, first_pred, "kwhs")
-    pers = pers[1:-2] #used as a hack to fix the wrap-around issue
+    # pers = pers[1:-2] #used as a hack to fix the wrap-around issue
     avg_per         = np.average(pers, axis=0)
     weirdness       = []
     totals          = []
@@ -323,14 +332,18 @@ def gen_strange_pers(d, num_pers = 3, period = "day"):
         
 
 def make_strange_per_fig(d, ax, per):
-    vals, new_times = per
-    ax.plot(new_times, vals)
+    kvals, tvals, new_times = per
+    ax.plot(new_times, kvals, label = "kwhs")
+    ax.plot(new_times, tvals, label = "temperature")
+    
     ax.set_title("Beginning " + new_times[0].strftime("%m/%d/%Y"))
-    ax.set_ylabel("kwhs")
+    ax.set_ylabel("kwhs/temperature")
     labels = ax.get_xticklabels() 
     for label in labels: 
         label.set_rotation(30) 
-    
+   
+    ax.grid(True)
+    ax.legend()
 
 def make_extreme_days_figs(d, axhigh, axlow):
     is_midnight     = (lambda x: x.hour == 0)
@@ -359,6 +372,29 @@ def make_extreme_days_figs(d, axhigh, axlow):
     labels = axlow.get_xticklabels() 
     for label in labels: 
         label.set_rotation(30) 
+
+
+def gen_over_thresh(d, thresh, num_times = 3):
+    times                = d["times"]
+    kwhs, kwhs_oriflag   = d["kwhs"]
+    temps, temps_oriflag = d["temps"]
+
+    #right now, just assume you start and end below thresh
+    left_sides   = [ind for ind in range(len(kwhs)-1) if kwhs[ind] <= thresh and kwhs[ind+1] > thresh]
+    right_sides  = [ind for ind in range(len(kwhs)-1) if kwhs[ind] > thresh and kwhs[ind+1] <= thresh]
+    periods = zip(left_sides, right_sides)
+
+    for ls, rs in periods:
+        new_left_side  = max(0, ls - 12)
+        new_right_side = min(len(kwhs)-1, rs + 12)
+
+        kvals  =  kwhs[new_left_side:new_right_side]
+        ptimes = times[new_left_side:new_right_side]
+        tvals  = temps[new_left_side:new_right_side]
+
+        yield kvals, tvals,  ptimes
+
+
   
 def plot_it(d):
     bid = d["bid"]
@@ -373,7 +409,7 @@ def plot_it(d):
     avgday   = fig.add_subplot(nrows, 2, 3)
     avgweek  = fig.add_subplot(nrows, 2, 4)
     #freqs    = fig.add_subplot(nrows, ncols, 1)
-    hist    = fig.add_subplot(nrows, ncols, 1)
+    hist     = fig.add_subplot(nrows, ncols, 1)
     
     make_text_fig(d, textfig)
     make_temp_vs_time_fig(d, tvt)
@@ -403,15 +439,28 @@ def test_things(d):
     '''    
 
     fig2 = plt.figure(figsize = (20, 20))
+    kwhs, kwhs_oriflag = d["kwhs"]
+    thresh = np.percentile(kwhs[kwhs_oriflag], 99)
+    overtimes = gen_over_thresh(d, thresh)
+    
+    for i, p in enumerate(overtimes):
+        if i >= 9: break
+        over_fig = fig2.add_subplot(3, 3, i + 1)
+        make_strange_per_fig(d, over_fig, p)
+
+    plt.savefig("delme.png")
+    exit()
+
+    fig2 = plt.figure(figsize = (20, 20))
     weeks = gen_strange_pers(d, 6, period = "week")
-    weeks.next()
+  
     for i, p in enumerate(weeks):
         week_fig = fig2.add_subplot(3, 3, i + 1)
         make_strange_per_fig(d, week_fig, p)
-
+        print p[0]
     avg_week = fig2.add_subplot(4, 1, 4)
     make_avg_week_fig(d, avg_week)
-    plt.show()
+    plt.savefig("delme.png")
     exit()
 
     fig2 = plt.figure(figsize = (20, 20))
@@ -446,10 +495,10 @@ def test_things(d):
 if __name__ == "__main__":
     #data, desc = qload("agentis_b_records_2011_updated_small.pkl")
     #data, desc = qload("agentis_b_records_2011_updated.pkl")
-    #data, desc = qload("agentis_allyears_19870_updated.pkl")
-    #data, desc = qload("agentis_allyears_18400_updated.pkl")
-    #data, desc = qload("agentis_allyears_21143_updated.pkl")
-    data, desc = qload("agentis_allyears_22891_updated.pkl")
+    #data, desc = qload("agentis_oneyear_19870_updated.pkl")
+    #data, desc = qload("agentis_oneyear_18400_updated.pkl")
+    #data, desc = qload("agentis_oneyear_21143_updated.pkl")
+    data, desc = qload("agentis_oneyear_22891_updated.pkl")
     data = [data]
     sys.stdout.flush()
     #data = [data[-1]]
