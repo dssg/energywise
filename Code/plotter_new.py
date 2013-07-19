@@ -16,6 +16,24 @@ utc_tz  = pytz.utc
 tz_used = pytz.timezone("US/Central")
 
 def get_periods(d, nobs, first_pred, which = "kwhs", skip_fun = (lambda x: False), wrap_around = False):
+    """Get a collection of periods (e.g., weeks) from a building record.
+
+    Parameters:
+    d -- The building record.
+    nobs -- The number (int) of observations for a single period (e.g., 168 for weeks).
+    first_pred -- A function which, given a datetime object, returns True if it is the start of the period.
+                  For example, first_pred returns True only when the argument is Sunday at Midnight.
+    which -- A string representing which time series in the building record to use (defaults to "kwhs")
+    skip_fun -- A function which takes a datetime object and returns True if that time should be skipped.
+                For example, skip_fun may return True on weekends, to obtain only work weeks.
+    wrap_around -- If True, the beginning part of the time series is placed at the end.
+                   For example, if we're starting periods on Monday, but the first day in the time series 
+                   is Thursday, then the first part (from Thrusday to Monday) will be moved to the end.
+
+    Returns (pers, new_times):
+         pers -- The values (e.g., kwhs) of the periods.
+         new_times -- The times (datetime objects) associated with the values.
+    """
     times                  = d["times"]
     series, series_oriflag = d[which]
     
@@ -46,6 +64,12 @@ def get_periods(d, nobs, first_pred, which = "kwhs", skip_fun = (lambda x: False
 
 
 def make_text_fig(d, textfig):
+    """Show the static information from the building record in a given axis.
+
+    Parameters:
+    d -- The building record.
+    textfig -- The axis to hold the figure.
+    """
     bid                  = d["bid"]
     naics                = d["naics"]
     btype                = d["btype"]
@@ -67,6 +91,12 @@ def make_text_fig(d, textfig):
     
 
 def make_temp_vs_time_fig(d, tvt):
+    """Show temperature as a function of time in a given axis.
+
+    Parameters:
+    d -- The building record.
+    tvt -- The axis to hold the figure.
+    """
     times                = d["times"]
     temps, temps_oriflag = d["temps"]
     
@@ -82,6 +112,12 @@ def make_temp_vs_time_fig(d, tvt):
         
 
 def make_kwhs_vs_time_fig(d, tvk):
+    """Show kwhs as a function of time in a given axis.
+
+    Parameters:
+    d -- The building record.
+    tvk -- The axis to hold the figure.
+    """
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
 
@@ -101,6 +137,13 @@ def make_kwhs_vs_time_fig(d, tvk):
 
 
 def make_freqs_fig(d, freqs):
+    """Show kwhs in the frequency domain (via the DFT).
+       Note: This function requires data from (all of) 2011.
+
+    Parameters:
+    d -- The building record.
+    freqs -- The axis to hold the figure.
+    """
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
     temps, temps_oriflag = d["temps"]
@@ -138,6 +181,12 @@ def make_freqs_fig(d, freqs):
 
 
 def make_temp_vs_kwh_fig(d, tmpsvk):
+    """Show a 2d-histogram of temperatures vs kwhs in a given axis.
+    
+    Parameters:
+    d -- The building record.
+    tmpsvk -- The axis to hold the figure.
+    """
     kwhs, kwhs_oriflag   = d["kwhs"]
     temps, temps_oriflag = d["temps"]
 
@@ -151,6 +200,14 @@ def make_temp_vs_kwh_fig(d, tmpsvk):
 
     
 def make_avg_day_fig(d, avgday):
+    """Show the average day in a given axis.
+       Note: imputed values are ignored.
+
+    Parameters:
+    d -- The building record.
+    avgday -- The axis to hold the figure.
+    """
+
     is_midnight     = (lambda x: x.hour == 0)
     days, new_times = get_periods(d, 24, is_midnight, "kwhs")
 
@@ -181,6 +238,14 @@ def make_avg_day_fig(d, avgday):
 
 
 def make_avg_week_fig(d, avgweek):
+    """Show the average week in a given axis.
+       Note: imputed values are ignored.
+
+    Parameters:
+    d -- The building record.
+    avgweek -- The axis to hold the figure.
+    """
+
     is_sunday_start  = (lambda x: x.weekday() == 6 and x.hour == 0)
     weeks, new_times = get_periods(d, 168, is_sunday_start, "kwhs")
 
@@ -203,6 +268,13 @@ def make_avg_week_fig(d, avgweek):
 
 
 def make_hist_fig(d, hist):
+    """Show a histogram of hourly energy usage.
+       Note: imputed values are ignored.
+
+    Parameters:
+    d -- The building record.
+    hist -- The axis to hold the figure.
+    """
     kwhs, kwhs_oriflag   = d["kwhs"]
     
     hist.hist(kwhs[kwhs_oriflag], bins = 50)
@@ -211,6 +283,12 @@ def make_hist_fig(d, hist):
 
 
 def gen_peaks(d, num_peaks = 3):
+    """A generatore that yields the index of the highest peaks.
+       
+    Parameters:
+    d -- The building record.
+    num_peaks -- The number of peaks to be yielded.
+    """
     kwhs, kwhs_oriflag   = d["kwhs"]
     
     inds = np.argsort(kwhs)[-num_peaks:]
@@ -219,6 +297,14 @@ def gen_peaks(d, num_peaks = 3):
 
 
 def make_peak_fig(d, ax, ind):
+    """Show the 24-hour period around the time at index ind.
+
+    Parameters:
+    d -- The building record.
+    ax -- The axis to hold the figure.
+    ind -- The index of the time to display.
+    """
+
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
  
@@ -230,15 +316,29 @@ def make_peak_fig(d, ax, ind):
 
 
 def make_kwh_vs_sun_fig(d, ax):
+    """Show a 2d-histogram of kwhs vs the position of the sun in a given axis.
+       Note: Imputed values are ignored.
+
+    Parameters:
+    d -- The building record.
+    ax -- The axis to hold the figure.
+    """
+
     states=pickle.load(open('stateDB.pickle','r'))    
     o = ephem.Observer()
-    def getSun(stateID,currentTime,city=None):
-        # stateID is a string abbreviation of the state name, ie "IL","AZ",etc.
-        # currentTime is local time with tzinfo = state time zone
-        # city is optional (defaults to state capital if missing or not found in database)
-        # returns sin(altitude) 
-        # altitude,azimuth are given in radians
+    def getSun(stateID, currentTime, city=None):
+        """Get the position of the sun at a given time and location.
         
+        Parameters:
+        stateID  -- A string abbreviation of the state name, ie "IL","AZ",etc..
+        currentTime -- Local time with tzinfo = state time zone.
+        city (optional) -- The City  (defaults to state capital if missing or not found in database).
+        
+        Returns:
+        sin(altitude) (representing how much sunlight hits an area)
+        """
+        #Note:  altitude,azimuth are given in radians
+
         stateID.capitalize()
         dateStamp=currentTime.astimezone(pytz.utc)
         
@@ -274,12 +374,14 @@ def make_kwh_vs_sun_fig(d, ax):
 
 
 def make_monthly_usage_fig(d, ax):
-    bid                  = d["bid"]
-    naics                = d["naics"]
-    btype                = d["btype"]
+    """Show a barchart with the totaly electricy usage by month.
+    
+    Parameters:
+    d -- The building record.
+    ax-- The axis to hold the figure.
+    """
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
-    temps, temps_oriflag = d["temps"]
 
     month_breaks = [ind for ind, t in enumerate(times) if t.day == 1 and t.hour == 0]
 
@@ -296,6 +398,13 @@ def make_monthly_usage_fig(d, ax):
 
 
 def gen_strange_pers(d, num_pers = 3, period = "day"):
+    """A generator which yields the strangest period (day or week).
+
+    Parameters:
+    d -- The building record.
+    num_pers -- The number of periods to be yieled (one at a time).
+    period -- A string, either "day" or "week".
+    """
     kwhs, kwhs_oriflag = d["kwhs"]
 
     if period == "day":
@@ -332,6 +441,14 @@ def gen_strange_pers(d, num_pers = 3, period = "day"):
         
 
 def make_strange_per_fig(d, ax, per):
+    """Creates a plot of the period yieled from get_strange_pers.
+
+    Parameters:
+    d -- The building record.
+    ax -- The axis to hold the figure.
+    per -- The period yieled from get_strange_pers.
+    """
+
     kvals, tvals, new_times = per
     ax.plot(new_times, kvals, label = "kwhs")
     ax.plot(new_times, tvals, label = "temperature")
@@ -346,6 +463,13 @@ def make_strange_per_fig(d, ax, per):
     ax.legend()
 
 def make_extreme_days_figs(d, axhigh, axlow):
+    """Show the extreme high and extreme low days (in terms of electricity usage).
+    
+    Parameters:
+    d -- The building recorod.
+    axhigh -- The axis to hold the extreme-high figure.
+    axlow -- The axis to hold the extreme-low figure.
+    """
     is_midnight     = (lambda x: x.hour == 0)
     days, new_times = get_periods(d, 24, is_midnight, "kwhs")
     avg_day         = np.average(days, axis=0)
@@ -374,7 +498,16 @@ def make_extreme_days_figs(d, axhigh, axlow):
         label.set_rotation(30) 
 
 
-def gen_over_thresh(d, thresh, num_times = 3):
+def gen_over_thresh(d, thresh):
+    """A generatore that yields the times where the energy usage was above some threshold.
+    
+    Parameters:
+    d -- The building record.
+    thresh -- The threshold.
+
+    Returns:
+    TODO
+    """
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
     temps, temps_oriflag = d["temps"]
@@ -397,6 +530,7 @@ def gen_over_thresh(d, thresh, num_times = 3):
 
   
 def plot_it(d):
+    """PLOT IT!"""
     bid = d["bid"]
     fig = plt.figure(figsize = (20, 20))
     
