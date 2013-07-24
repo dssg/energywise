@@ -268,9 +268,9 @@ def make_avg_day_fig(d, avgday):
     std_weekday     = np.ma.std(weekdays, axis = 0)
     std_day         = np.ma.std(days, axis = 0)
 
-    avgday.errorbar(np.arange(24), avg_weekend, yerr =std_weekend, label = "Weekend")
+    avgday.errorbar([-0.25 + x for x in np.arange(24)], avg_weekend, yerr =std_weekend, label = "Weekend")
     avgday.errorbar(np.arange(24), avg_weekday, yerr =std_weekday, label = "Weekday")
-    avgday.errorbar(np.arange(24), avg_day,     yerr =std_day,     label = "Day")
+    avgday.errorbar([0.25 + x for x in np.arange(24)], avg_day,     yerr =std_day,     label = "Day")
 
     avgday.set_title("Average Day")
     avgday.set_ylabel("Energy Usage (kwh)")
@@ -693,7 +693,7 @@ def multi_plot(d):
     make_temp_vs_time_fig(d, a_temps)
     make_kwhs_vs_time_fig(d, a_kwhs)
     make_freqs_fig(d, a_freqs)
-    a_fig.suptitle("Appendix?", fontsize = fontsize)
+    a_fig.suptitle("Raw Data", fontsize = fontsize)
     plt.savefig(pdf, format = 'pdf')
 
     #outliers 
@@ -731,11 +731,10 @@ def multi_plot(d):
         over_fig = ot_fig.add_subplot(3, 3, i + 1)
         make_strange_per_fig(d, over_fig, p)
 
-    ot_fig.suptitle("Times over 99th percentile (%s)" % np.round(thresh, 2), fontsize = 36)
+    ot_fig.suptitle("Times in the top 1%% (>%.2f)" % thresh, fontsize = 36)
     plt.savefig(pdf, format = 'pdf')
 
     #spikes
-
     times     = d["times"]
     num_times = 6 
     inds      = get_times_of_highest_change(d, num_times, direction = "increase")
@@ -747,7 +746,9 @@ def multi_plot(d):
         ax = s_fig.add_subplot(num_times//2, 2, i+1)
         make_interval_plot(d, ax, left_side, right_side)
         ax.set_title("Spike at " + times[ind].strftime("%m/%d/%y %H:%M:%S"))
-
+        for x in dir(ax):
+            print x
+        
     s_fig.suptitle("Spikes", fontsize = fontsize)
     plt.savefig(pdf, format = 'pdf')
  
@@ -773,8 +774,8 @@ if __name__ == "__main__":
     #data, desc = qload("agentis_b_records_2011_updated.pkl")
     #data, desc = qload("agentis_oneyear_19870_updated.pkl")
     #data, desc = qload("agentis_oneyear_18400_updated.pkl")
-    data, desc = qload("agentis_oneyear_21143_updated.pkl")
-    #data, desc = qload("agentis_oneyear_22891_updated.pkl")
+    #data, desc = qload("agentis_oneyear_21143_updated.pkl")
+    data, desc = qload("agentis_oneyear_22891_updated.pkl")
     data = [data]
     sys.stdout.flush()
     #data = [data[-1]]
