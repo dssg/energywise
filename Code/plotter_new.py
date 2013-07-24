@@ -1,5 +1,5 @@
 import matplotlib
-matplotlib.use('Agg')
+#matplotlib.use('Agg')
 import  ephem
 import  math
 import  sys
@@ -14,6 +14,40 @@ import  pytz
 import  heapq
 utc_tz  = pytz.utc
 tz_used = pytz.timezone("US/Central")
+font = {'size'   : 6}
+
+matplotlib.rc('font', **font)
+states=pickle.load(open('stateDB.pickle','r'))    
+def getSun(stateID, currentTime, city=None):
+    """Get the position of the sun at a given time and location.
+    
+    Parameters:
+    stateID  -- A string abbreviation of the state name, ie "IL","AZ",etc..
+    currentTime -- Local time with tzinfo = state time zone.
+    city (optional) -- The City  (defaults to state capital if missing or not found in database).
+    
+    Returns:
+    sin(altitude) (representing how much sunlight hits an area)
+    """
+        #Note:  altitude,azimuth are given in radians
+    o = ephem.Observer()    
+    stateID.capitalize()
+    dateStamp=currentTime.astimezone(pytz.utc)
+    
+    if city is None:
+        city=states[stateID]['capital']        
+    else:
+        try:
+            city=states[stateID][city].capitalize()
+        except:
+            city=states[stateID]['capital'] 
+            
+    o.lat    = states[stateID][city][0]
+    o.long   = states[stateID][city][1]
+    o.date   = dateStamp
+    sun = ephem.Sun(o)
+    alt=sun.alt
+    return math.sin(alt)
 
 def get_periods(d, nobs, first_pred, which = "kwhs", skip_fun = (lambda x: False), wrap_around = False):
     """Get a collection of periods (e.g., weeks) from a building record.
@@ -76,9 +110,15 @@ def make_text_fig(d, textfig):
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
     temps, temps_oriflag = d["temps"]
-    
+    naics_map, desc = qload("NAICS.pkl")
+    if naics in naics_map:
+        naics_str = naics_map[naics]
+        naics_str = " (" + naics_str.lstrip().rstrip() + ")"
+    else:
+        naics_str = ""
+
     toPrint =  "ID:\n   "   + str(bid)\
-        + "\nNaics:\n   "     + str(naics)\
+        + "\nNaics:\n   "     + str(naics) + naics_str\
         + "\nType:\n   "    + str(btype)\
         + "\nAverage Hourly Energy Usage:\n    " + str(np.round(np.average(kwhs), 2)) + "kw"\
         + "\nMin:\n    "    + str(np.round(np.min(kwhs), 2))\
@@ -102,6 +142,7 @@ def make_temp_vs_time_fig(d, tvt):
     
     tvt.plot(   times[temps_oriflag] , temps[temps_oriflag] , c = "blue")
     tvt.scatter(times[~temps_oriflag], temps[~temps_oriflag], lw = 0,  c = "red")
+    tvt.scatter(times[~temps_oriflag], [0 for x in temps[~temps_oriflag]], lw = 0,  c = "red", s = 1)
 
     tvt.set_title("Temperature Over Time")
     tvt.set_ylabel("Temperature")
@@ -123,6 +164,7 @@ def make_kwhs_vs_time_fig(d, tvk):
 
     tvk.plot(times[kwhs_oriflag], kwhs[kwhs_oriflag], c = "blue", label = "Energy Usage")
     tvk.scatter(times[~kwhs_oriflag], kwhs[~kwhs_oriflag], c = "red", lw = 0, label = "Imputed Values")
+    tvk.scatter(times[~kwhs_oriflag], [0 for x in kwhs[~kwhs_oriflag]], c = "red", lw = 0, s = 1)
     ori_kwhs    = kwhs[kwhs_oriflag]
     per_95_kwhs = np.percentile(ori_kwhs, 95)
     per_5_kwhs  = np.percentile(ori_kwhs, 5)
@@ -324,39 +366,9 @@ def make_kwh_vs_sun_fig(d, ax):
     ax -- The axis to hold the figure.
     """
 
-    states=pickle.load(open('stateDB.pickle','r'))    
-    o = ephem.Observer()
-    def getSun(stateID, currentTime, city=None):
-        """Get the position of the sun at a given time and location.
-        
-        Parameters:
-        stateID  -- A string abbreviation of the state name, ie "IL","AZ",etc..
-        currentTime -- Local time with tzinfo = state time zone.
-        city (optional) -- The City  (defaults to state capital if missing or not found in database).
-        
-        Returns:
-        sin(altitude) (representing how much sunlight hits an area)
-        """
-        #Note:  altitude,azimuth are given in radians
 
-        stateID.capitalize()
-        dateStamp=currentTime.astimezone(pytz.utc)
-        
-        if city is None:
-            city=states[stateID]['capital']        
-        else:
-            try:
-                city=states[stateID][city].capitalize()
-            except:
-                city=states[stateID]['capital'] 
-                
-        o.lat    = states[stateID][city][0]
-        o.long   = states[stateID][city][1]
-        o.date   = dateStamp
-        sun = ephem.Sun(o)
-        alt=sun.alt
-        return math.sin(alt)
 
+   
     bid                  = d["bid"]
     naics                = d["naics"]
     btype                = d["btype"]
@@ -365,11 +377,12 @@ def make_kwh_vs_sun_fig(d, ax):
     temps, temps_oriflag = d["temps"]
 
     sun_pos = np.array([max(-100, getSun("IL", t)) for t in times[kwhs_oriflag]])
-    ax.hist2d(kwhs[kwhs_oriflag], sun_pos, bins = 50, norm = LogNorm())
+    #ax.hist2d(kwhs[kwhs_oriflag], sun_pos, bins = 50, norm = LogNorm())
+    ax.hist2d(sun_pos, kwhs[kwhs_oriflag], bins = 50, norm = LogNorm())
     
     ax.set_title("Energy Usage vs sunlight")
-    ax.set_xlabel("kwh")
-    ax.set_ylabel("Sunlight")
+    ax.set_xlabel("Sunlight")
+    ax.set_ylabel("kwh")
     ax.grid(True)
 
 
@@ -416,7 +429,8 @@ def gen_strange_pers(d, num_pers = 3, period = "day"):
         return
     num_per_period = 24 if period == "day" else 168
     pers, new_times = get_periods(d, num_per_period, first_pred, "kwhs")
-    # pers = pers[1:-2] #used as a hack to fix the wrap-around issue
+    temp_pers, _ = get_periods(d, num_per_period, first_pred, which = "temps")
+
     avg_per         = np.average(pers, axis=0)
     weirdness       = []
     totals          = []
@@ -437,7 +451,8 @@ def gen_strange_pers(d, num_pers = 3, period = "day"):
     for ind in inds:
         vals = pers[ind]
         times = new_times[ind]
-        yield vals, times
+        temps = temp_pers[ind]
+        yield vals, temps, times
         
 
 def make_strange_per_fig(d, ax, per):
@@ -528,6 +543,63 @@ def gen_over_thresh(d, thresh):
         yield kvals, tvals,  ptimes
 
 
+def get_times_of_highest_change(d, num_times, direction = "increase"):
+    """Returns the indices where the highest increase in electricity usage occured.
+    Note the indices returned are for just before the spikes occured (as opposed to just after).
+
+    Parameters:
+    d -- The building record.
+    num_times -- The number of times to be returned.
+    direction -- Either "increase" (default) or "decrease"
+    """
+    kwhs, kwhs_oriflag = d["kwhs"]
+    times = d["times"]
+    first_deriv = kwhs[1:] - kwhs[:-1]
+
+    inds = np.argsort(first_deriv)
+
+    if direction == "increase":
+        inds = inds[-num_times:][::-1]
+    else:
+        inds = inds[:num_times]
+
+    return inds
+
+
+def make_interval_plot(d, ax, start, end, show_temps = True, show_sun = True, show_weekends = True):
+
+    times                = d["times"]
+    kwhs, kwhs_oriflag   = d["kwhs"]
+    temps, temps_oriflag = d["temps"]    
+
+    kwhs          = kwhs[start:end]
+    kwhs_oriflag  = kwhs_oriflag[start:end]
+    temps         = temps[start:end]
+    temps_oriflag = temps_oriflag[start:end]
+    times         = times[start:end]
+
+    lns1 = ax.plot(times, kwhs, label = "kwhs")
+    ax.set_ylabel("kwh")
+
+    suns = np.array([max(0, getSun("IL", x)) for x in times])
+    sun_ax = ax.twinx()
+    lns2 = sun_ax.plot(times, suns, label = "Sunlight", c = "purple", alpha = 0.3, ls = "dashed")
+
+    sun_ax.set_ylim((-.5, 1))
+    sun_ax.set_yticks([])
+
+
+    weather_ax = sun_ax.twinx()
+    weather_ax.set_ylabel("Temperature")
+    lns3 = weather_ax.plot(times, temps, label = "Temperature", c = "red", alpha = 0.4)
+        
+    lns = lns1+lns2+lns3
+    labs = [l.get_label() for l in lns]
+    weather_ax.legend(lns, labs, loc=0)
+    
+    ax.axvspan(times[10], times[20],facecolor = "grey",  alpha = 0.2)
+    ax.grid(True)
+
   
 def plot_it(d):
     """PLOT IT!"""
@@ -559,7 +631,84 @@ def plot_it(d):
     plt.close()
     
 
+def multi_plot(d):
+    size = (10, 10)
+    #General/global figure
+    g_fig = plt.figure(figsize = size)
+    g_text    = g_fig.add_subplot(2, 2, 1)
+    g_hist    = g_fig.add_subplot(2, 2, 2)
+    g_totals  = g_fig.add_subplot(2, 1, 2)
+
+    make_text_fig(d, g_text)
+    make_hist_fig(d, g_hist)
+    make_monthly_usage_fig(d, g_totals)
+    
+    #Normalness figure
+    n_fig = plt.figure(figsize = size)
+    n_avgday  = n_fig.add_subplot(2, 2, 1)
+    n_avgweek = n_fig.add_subplot(2, 2, 2)
+    n_vstemp  = n_fig.add_subplot(2, 2, 3)
+    n_vssun   = n_fig.add_subplot(2, 2, 4)
+
+    make_avg_day_fig(d, n_avgday)
+    make_avg_week_fig(d, n_avgweek)
+    make_temp_vs_kwh_fig(d, n_vstemp)
+    make_kwh_vs_sun_fig(d, n_vssun)
+    
+    #Appendix figure
+    a_fig = plt.figure(figsize = size)
+    a_temps    = a_fig.add_subplot(3, 1, 1)
+    a_kwhs     = a_fig.add_subplot(3, 1, 2)
+    a_freqs    = a_fig.add_subplot(3, 1, 3)
+    
+    make_temp_vs_time_fig(d, a_temps)
+    make_kwhs_vs_time_fig(d, a_kwhs)
+    make_freqs_fig(d, a_freqs)
+
+    #outliers 
+    outliers = plt.figure(figsize = size)
+    avg_day = outliers.add_subplot(5, 2, 1)
+    make_avg_day_fig(d, avg_day)
+
+    days = gen_strange_pers(d, 4, period = "day")
+    for i, p in enumerate(days):
+        day_fig = outliers.add_subplot(5, 2, 2*(i + 2)-1)
+        make_strange_per_fig(d, day_fig, p)
+
+    avg_week = outliers.add_subplot(5, 2, 2)
+    make_avg_week_fig(d, avg_week)
+
+    weeks = gen_strange_pers(d, 4, period = "week")
+    for i, p in enumerate(weeks):
+        week_fig = outliers.add_subplot(5, 2, 2*(i + 2))
+        make_strange_per_fig(d, week_fig, p)
+
+    #overthresh
+    overthresh = plt.figure(figsize = size)
+    kwhs, kwhs_oriflag = d["kwhs"]
+    thresh = np.percentile(kwhs[kwhs_oriflag], 99)
+    overtimes = gen_over_thresh(d, thresh)
+    
+    for i, p in enumerate(overtimes):
+        if i >= 9: break
+        over_fig = overthresh.add_subplot(3, 3, i + 1)
+        make_strange_per_fig(d, over_fig, p)
+
+    #spikes
+
+    
+    #...
+    
+
+    #extreme days
+
+
+    plt.subplots_adjust(hspace = .55)
+    plt.show()
+
+
 def test_things(d):
+    
     bid = d["bid"]
     '''
     fig = plt.figure(figsize = (10, 10))
@@ -582,7 +731,9 @@ def test_things(d):
         over_fig = fig2.add_subplot(3, 3, i + 1)
         make_strange_per_fig(d, over_fig, p)
 
-    plt.savefig("delme.png")
+    #plt.savefig("delme.png")
+    plt.show()
+    print "got here"
     exit()
 
     fig2 = plt.figure(figsize = (20, 20))
@@ -641,11 +792,15 @@ if __name__ == "__main__":
     print "vals for point 0:", len(data[0]["times"])
     print "\n"
     for ind, d in enumerate(data):
-        test_things(d)
-        exit()
-        plot_it(d)
-        bid = d["bid"]
-        print str(ind), ": plotted something..."
+        multi_plot(d)
+        #fig = plt.figure(figsize = (10, 10))
+        #ax = fig.add_subplot(1, 1, 1)
+        #make_interval_plot(d, ax, 500, 500+168)
+        plt.show()
+        #exit()
+        #plot_it(d)
+        #bid = d["bid"]
+        #print str(ind), ": plotted something..."
         sys.stdout.flush()
         
         
