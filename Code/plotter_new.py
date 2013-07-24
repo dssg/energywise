@@ -217,7 +217,7 @@ def make_freqs_fig(d, freqs):
     freqs.set_xticklabels(highlighted_labels)
     
     freqs.legend()
-    freqs.set_title("Energy usage over time in the frequency domain")
+    freqs.set_title("Energy usage in the frequency domain")
     labels = freqs.get_xticklabels() 
     for label in labels: 
         label.set_rotation(30) 
@@ -700,11 +700,13 @@ def multi_plot(d):
     o_fig = plt.figure(figsize = size)
     avg_day = o_fig.add_subplot(5, 2, 1)
     make_avg_day_fig(d, avg_day)
+    times = d["times"]
 
     days = gen_strange_pers(d, 3, period = "day")
     for i, p in enumerate(days):
         day_fig = o_fig.add_subplot(4, 2, 2*(i + 2)-1)
         make_strange_per_fig(d, day_fig, p)
+        day_fig.set_title(times[p[0]].strftime("%m/%d/%y"))
 
     avg_week = o_fig.add_subplot(5, 2, 2)
     make_avg_week_fig(d, avg_week)
@@ -713,7 +715,8 @@ def multi_plot(d):
     for i, p in enumerate(weeks):
         week_fig = o_fig.add_subplot(4, 2, 2*(i + 2))
         make_strange_per_fig(d, week_fig, p)
-
+        week_fig.set_title(times[p[0]].strftime("%m/%d/%y") + " - " + 
+                          times[p[1]].strftime("%m/%d/%y"))
     o_fig.suptitle("Outliers", fontsize = fontsize)
     plt.savefig(pdf, format = 'pdf')
 
