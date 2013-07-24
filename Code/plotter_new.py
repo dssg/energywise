@@ -142,8 +142,8 @@ def make_temp_vs_time_fig(d, tvt):
     temps, temps_oriflag = d["temps"]
     
     tvt.plot(   times[temps_oriflag] , temps[temps_oriflag] , c = "blue")
-    tvt.scatter(times[~temps_oriflag], temps[~temps_oriflag], lw = 0,  c = "red")
-    tvt.scatter(times[~temps_oriflag], [0 for x in temps[~temps_oriflag]], lw = 0,  c = "red", s = 1)
+    tvt.scatter(times[~temps_oriflag], temps[~temps_oriflag], edgecolors = "none",  c = "red")
+    tvt.scatter(times[~temps_oriflag], [0 for x in temps[~temps_oriflag]], edgecolors = "none", c = "red", s = 1)
 
     tvt.set_title("Temperature Over Time")
     tvt.set_ylabel("Temperature")
@@ -164,8 +164,8 @@ def make_kwhs_vs_time_fig(d, tvk):
     kwhs, kwhs_oriflag   = d["kwhs"]
 
     tvk.plot(times[kwhs_oriflag], kwhs[kwhs_oriflag], c = "blue", label = "Energy Usage")
-    tvk.scatter(times[~kwhs_oriflag], kwhs[~kwhs_oriflag], c = "red", lw = 0, label = "Imputed Values")
-    tvk.scatter(times[~kwhs_oriflag], [0 for x in kwhs[~kwhs_oriflag]], c = "red", lw = 0, s = 1)
+    tvk.scatter(times[~kwhs_oriflag], kwhs[~kwhs_oriflag], c = "red", edgecolors = "none", label = "Imputed Values")
+    tvk.scatter(times[~kwhs_oriflag], [0 for x in kwhs[~kwhs_oriflag]], c = "red", edgecolors = "none",  s = 1)
     ori_kwhs    = kwhs[kwhs_oriflag]
     per_95_kwhs = np.percentile(ori_kwhs, 95)
     per_5_kwhs  = np.percentile(ori_kwhs, 5)
