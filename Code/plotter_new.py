@@ -297,7 +297,7 @@ def make_avg_week_fig(d, avgweek):
     avgweek.errorbar(np.arange(168), avg_week, yerr =std_week, label = "Energy Usage", errorevery = 6)
 
     avgweek.set_title("Average Week")
-    avgweek.set_ylabel("Temperature (F) / Energy Usage (kwh)")
+    avgweek.set_ylabel("Energy Usage (kwh)")
     avgweek.set_xlim(-0.5, 24.5)
     avgweek.set_xticks(range(0, 169, 24))
     avgweek.set_xticklabels(["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])
@@ -347,6 +347,7 @@ def make_peak_fig(d, ax, ind):
     ind -- The index of the time to display.
     """
 
+
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
  
@@ -354,7 +355,9 @@ def make_peak_fig(d, ax, ind):
     highest_val  = kwhs[ind]
     leftmost  = max(0, ind-12)
     rightmost = min(len(kwhs), ind+12)
-    ax.plot(kwhs[leftmost:rightmost], alpha = 0.5)
+    
+    make_interval_plot(d, ax, leftmost, rightmost)
+    
 
 
 def make_kwh_vs_sun_fig(d, ax):
@@ -419,7 +422,7 @@ def gen_strange_pers(d, num_pers = 3, period = "day"):
     period -- A string, either "day" or "week".
     """
     kwhs, kwhs_oriflag = d["kwhs"]
-
+    times = d["times"]
     if period == "day":
         first_pred = (lambda x: x.hour == 0)
     elif period == "week":
@@ -449,10 +452,18 @@ def gen_strange_pers(d, num_pers = 3, period = "day"):
         weirdness.append(dist)
     inds = np.argsort(weirdness)[-num_pers:][::-1]
     for ind in inds:
-        vals = pers[ind]
-        times = new_times[ind]
-        temps = temp_pers[ind]
-        yield vals, temps, times
+        left_side  = np.argmax(times == new_times[ind][0])#hackish, but oh well
+        right_side = np.argmax(times == new_times[ind][-1])#hackish, but oh well
+ 
+
+        yield left_side, right_side
+
+#        vals = pers[ind]
+#        times = new_times[ind]
+#        temps = temp_pers[ind]
+        
+
+#        yield vals, temps, times
         
 
 def make_strange_per_fig(d, ax, per):
@@ -464,18 +475,22 @@ def make_strange_per_fig(d, ax, per):
     per -- The period yieled from get_strange_pers.
     """
 
-    kvals, tvals, new_times = per
-    ax.plot(new_times, kvals, label = "kwhs")
-    ax.plot(new_times, tvals, label = "temperature")
+    if len(per) == 2:
+        start, end = per
+        make_interval_plot(d, ax, start, end)
+    else:
+        kvals, tvals, new_times = per
+        ax.plot(new_times, kvals, label = "kwhs")
+        ax.plot(new_times, tvals, label = "temperature")
     
-    ax.set_title("Beginning " + new_times[0].strftime("%m/%d/%Y"))
-    ax.set_ylabel("kwhs/temperature")
-    labels = ax.get_xticklabels() 
-    for label in labels: 
-        label.set_rotation(30) 
+        ax.set_title("Beginning " + new_times[0].strftime("%m/%d/%Y"))
+        ax.set_ylabel("kwhs/temperature")
+        labels = ax.get_xticklabels() 
+        for label in labels: 
+            label.set_rotation(30) 
    
-    ax.grid(True)
-    ax.legend()
+        ax.grid(True)
+        ax.legend()
 
 def make_extreme_days_figs(d, axhigh, axlow):
     """Show the extreme high and extreme low days (in terms of electricity usage).
@@ -540,7 +555,8 @@ def gen_over_thresh(d, thresh):
         ptimes = times[new_left_side:new_right_side]
         tvals  = temps[new_left_side:new_right_side]
 
-        yield kvals, tvals,  ptimes
+        yield new_left_side, new_right_side
+        #yield kvals, tvals,  ptimes
 
 
 def get_times_of_highest_change(d, num_times, direction = "increase"):
@@ -597,10 +613,13 @@ def make_interval_plot(d, ax, start, end, show_temps = True, show_sun = True, sh
     labs = [l.get_label() for l in lns]
     weather_ax.legend(lns, labs, loc=0)
     
-    ax.axvspan(times[10], times[20],facecolor = "grey",  alpha = 0.2)
+    
     ax.grid(True)
 
-  
+    labels = ax.get_xticklabels() 
+    for label in labels: 
+        label.set_rotation(30) 
+
 def plot_it(d):
     """PLOT IT!"""
     bid = d["bid"]
