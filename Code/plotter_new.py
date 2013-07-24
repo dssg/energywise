@@ -1,5 +1,6 @@
-import matplotlib
+import  matplotlib
 #matplotlib.use('Agg')
+from    matplotlib.backends.backend_pdf import PdfPages
 import  ephem
 import  math
 import  sys
@@ -124,7 +125,7 @@ def make_text_fig(d, textfig):
         + "\nMin:\n    "    + str(np.round(np.min(kwhs), 2))\
         + "\nMax:\n    "    + str(np.round(np.max(kwhs), 2))\
         + "\nTotal:\n     " + str(np.round(np.sum(kwhs)/1000.0, 2)) + "gwh"
-    textfig.text(0.05, .95,toPrint , fontsize=12, ha='left', va='top')
+    textfig.text(0.05, .95, toPrint, fontsize=10, ha='left', va='top')
     
     textfig.set_xticks([])
     textfig.set_yticks([])
@@ -653,6 +654,8 @@ def plot_it(d):
     
 
 def multi_plot(d):
+    fontsize = 36
+    pdf = PdfPages('multipage.pdf')
     size = (10, 10)
     #General/global figure
     g_fig = plt.figure(figsize = size)
@@ -663,7 +666,9 @@ def multi_plot(d):
     make_text_fig(d, g_text)
     make_hist_fig(d, g_hist)
     make_monthly_usage_fig(d, g_totals)
-    
+    g_fig.suptitle("BIG OL' TITLE FTW", fontsize = fontsize)
+    plt.savefig(pdf, format = 'pdf')
+
     #Normalness figure
     n_fig = plt.figure(figsize = size)
     n_avgday  = n_fig.add_subplot(2, 2, 1)
@@ -675,7 +680,10 @@ def multi_plot(d):
     make_avg_week_fig(d, n_avgweek)
     make_temp_vs_kwh_fig(d, n_vstemp)
     make_kwh_vs_sun_fig(d, n_vssun)
-    
+
+    n_fig.suptitle("Behavior", fontsize = fontsize)
+    plt.savefig(pdf, format = 'pdf')
+
     #Appendix figure
     a_fig = plt.figure(figsize = size)
     a_temps    = a_fig.add_subplot(3, 1, 1)
@@ -685,61 +693,75 @@ def multi_plot(d):
     make_temp_vs_time_fig(d, a_temps)
     make_kwhs_vs_time_fig(d, a_kwhs)
     make_freqs_fig(d, a_freqs)
+    a_fig.suptitle("Appendix?", fontsize = fontsize)
+    plt.savefig(pdf, format = 'pdf')
 
     #outliers 
-    outliers = plt.figure(figsize = size)
-    avg_day = outliers.add_subplot(5, 2, 1)
+    o_fig = plt.figure(figsize = size)
+    avg_day = o_fig.add_subplot(5, 2, 1)
     make_avg_day_fig(d, avg_day)
 
-    days = gen_strange_pers(d, 4, period = "day")
+    days = gen_strange_pers(d, 3, period = "day")
     for i, p in enumerate(days):
-        day_fig = outliers.add_subplot(5, 2, 2*(i + 2)-1)
+        day_fig = o_fig.add_subplot(4, 2, 2*(i + 2)-1)
         make_strange_per_fig(d, day_fig, p)
 
-    avg_week = outliers.add_subplot(5, 2, 2)
+    avg_week = o_fig.add_subplot(5, 2, 2)
     make_avg_week_fig(d, avg_week)
 
-    weeks = gen_strange_pers(d, 4, period = "week")
+    weeks = gen_strange_pers(d, 3, period = "week")
     for i, p in enumerate(weeks):
-        week_fig = outliers.add_subplot(5, 2, 2*(i + 2))
+        week_fig = o_fig.add_subplot(4, 2, 2*(i + 2))
         make_strange_per_fig(d, week_fig, p)
 
+    o_fig.suptitle("Outliers", fontsize = fontsize)
+    plt.savefig(pdf, format = 'pdf')
+
     #overthresh
-    overthresh = plt.figure(figsize = size)
     kwhs, kwhs_oriflag = d["kwhs"]
-    thresh = np.percentile(kwhs[kwhs_oriflag], 99)
-    overtimes = gen_over_thresh(d, thresh)
+    thresh            = np.percentile(kwhs[kwhs_oriflag], 99)
+    overtimes         = gen_over_thresh(d, thresh)
+    ot_fig = plt.figure(figsize = size)
     
     for i, p in enumerate(overtimes):
         if i >= 9: break
-        over_fig = overthresh.add_subplot(3, 3, i + 1)
+        over_fig = ot_fig.add_subplot(3, 3, i + 1)
         make_strange_per_fig(d, over_fig, p)
+
+    ot_fig.suptitle("Times over 99th percentile (%s)" % np.round(thresh, 2), fontsize = 36)
+    plt.savefig(pdf, format = 'pdf')
 
     #spikes
 
-    times = d["times"]
-    spikes = plt.figure(figsize = size)
-    num_times = 4 
-    inds = get_times_of_highest_change(d, num_times, direction = "increase")
+    times     = d["times"]
+    num_times = 6 
+    inds      = get_times_of_highest_change(d, num_times, direction = "increase")
+    s_fig     = plt.figure(figsize = size)
+
     for i, ind in enumerate(inds):
         left_side  = max(0,          ind-12)
         right_side = min(len(times), ind+12)
-        ax = spikes.add_subplot(num_times, 1, i+1)
+        ax = s_fig.add_subplot(num_times//2, 2, i+1)
         make_interval_plot(d, ax, left_side, right_side)
         ax.set_title("Spike at " + times[ind].strftime("%m/%d/%y %H:%M:%S"))
 
+    s_fig.suptitle("Spikes", fontsize = fontsize)
+    plt.savefig(pdf, format = 'pdf')
  
     #extreme days
-    extremedays = plt.figure(figsize = size)
-    axavg = extremedays.add_subplot(3, 1, 1)
-    axhigh = extremedays.add_subplot(3, 1, 2)
-    axlow = extremedays.add_subplot(3, 1, 3)
+    ex_fig      = plt.figure(figsize = size)
+    axavg       = ex_fig.add_subplot(3, 1, 1)
+    axhigh      = ex_fig.add_subplot(3, 1, 2)
+    axlow       = ex_fig.add_subplot(3, 1, 3)
     make_avg_day_fig(d, axavg)
     make_extreme_days_figs(d, axhigh, axlow)
 
+    ex_fig.suptitle("Extreme days", fontsize = fontsize)
+    plt.savefig(pdf, format = 'pdf')
 
-    plt.subplots_adjust(hspace = .55)
-    plt.show()
+    pdf.close()
+    #plt.subplots_adjust(hspace = .55)
+    #plt.show()
 
 
 
@@ -748,8 +770,8 @@ if __name__ == "__main__":
     #data, desc = qload("agentis_b_records_2011_updated.pkl")
     #data, desc = qload("agentis_oneyear_19870_updated.pkl")
     #data, desc = qload("agentis_oneyear_18400_updated.pkl")
-    #data, desc = qload("agentis_oneyear_21143_updated.pkl")
-    data, desc = qload("agentis_oneyear_22891_updated.pkl")
+    data, desc = qload("agentis_oneyear_21143_updated.pkl")
+    #data, desc = qload("agentis_oneyear_22891_updated.pkl")
     data = [data]
     sys.stdout.flush()
     #data = [data[-1]]
@@ -762,7 +784,7 @@ if __name__ == "__main__":
         #fig = plt.figure(figsize = (10, 10))
         #ax = fig.add_subplot(1, 1, 1)
         #make_interval_plot(d, ax, 500, 500+168)
-        plt.show()
+        #plt.show()
         #exit()
         #plot_it(d)
         #bid = d["bid"]
