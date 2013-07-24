@@ -505,7 +505,8 @@ def make_extreme_days_figs(d, axhigh, axlow):
     avg_day         = np.average(days, axis=0)
     weirdness       = []
     totals          = []
-    
+    times           = d["times"]
+
     for day in days:
         total = np.sum(day)
         totals.append(total)
@@ -513,19 +514,20 @@ def make_extreme_days_figs(d, axhigh, axlow):
         weirdness.append(dist)
     ind = np.argmax(totals)
     highest_day = new_times[ind][0]
-    axhigh.plot(new_times[ind], days[ind])
+   
+    left_side  = np.argmax(times == new_times[ind][0])#hackish, but oh well
+    right_side = np.argmax(times == new_times[ind][-1])#hackish, but oh well
+    make_interval_plot(d, axhigh, left_side, right_side)
+    #    axhigh.plot(new_times[ind], days[ind])
     axhigh.set_title("Highest Day\n" + highest_day.strftime("%m/%d/%Y"))
-    labels = axhigh.get_xticklabels() 
-    for label in labels: 
-        label.set_rotation(30) 
-
+   
     ind = np.argmin(totals)
     lowest_day = new_times[ind][0]
-    axlow.plot(new_times[ind], days[ind])
+    left_side  = np.argmax(times == new_times[ind][0])#hackish, but oh well
+    right_side = np.argmax(times == new_times[ind][-1])#hackish, but oh well
+    make_interval_plot(d, axlow, left_side, right_side)
+
     axlow.set_title("Lowest Day\n" + lowest_day.strftime("%m/%d/%Y"))
-    labels = axlow.get_xticklabels() 
-    for label in labels: 
-        label.set_rotation(30) 
 
 
 def gen_over_thresh(d, thresh):
@@ -720,6 +722,12 @@ def multi_plot(d):
     
 
     #extreme days
+    extremedays = plt.figure(figsize = size)
+    axavg = extremedays.add_subplot(3, 1, 1)
+    axhigh = extremedays.add_subplot(3, 1, 2)
+    axlow = extremedays.add_subplot(3, 1, 3)
+    make_avg_day_fig(d, axavg)
+    make_extreme_days_figs(d, axhigh, axlow)
 
 
     plt.subplots_adjust(hspace = .55)
