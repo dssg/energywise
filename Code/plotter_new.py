@@ -717,7 +717,16 @@ def multi_plot(d):
 
     #spikes
 
-    
+    times = d["times"]
+    spikes = plt.figure(figsize = size)
+    num_times = 4 
+    inds = get_times_of_highest_change(d, num_times, direction = "increase")
+    for i, ind in enumerate(inds):
+        left_side  = max(0,          ind-12)
+        right_side = min(len(times), ind+12)
+        ax = spikes.add_subplot(num_times, 1, i+1)
+        make_interval_plot(d, ax, left_side, right_side)
+        ax.set_title("Spike at " + times[ind].strftime("%m/%d/%y %H:%M:%S"))
     #...
     
 
