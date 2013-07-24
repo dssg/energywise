@@ -727,9 +727,8 @@ def multi_plot(d):
         ax = spikes.add_subplot(num_times, 1, i+1)
         make_interval_plot(d, ax, left_side, right_side)
         ax.set_title("Spike at " + times[ind].strftime("%m/%d/%y %H:%M:%S"))
-    #...
-    
 
+ 
     #extreme days
     extremedays = plt.figure(figsize = size)
     axavg = extremedays.add_subplot(3, 1, 1)
@@ -743,75 +742,6 @@ def multi_plot(d):
     plt.show()
 
 
-def test_things(d):
-    
-    bid = d["bid"]
-    '''
-    fig = plt.figure(figsize = (10, 10))
-    ax1 = fig.add_subplot(1, 2, 1)
-    ax2 = fig.add_subplot(1, 2, 2)
-
-    make_extreme_days_figs(d, ax1, ax2)
-    plt.show()
-    exit()
-
-    '''    
-
-    fig2 = plt.figure(figsize = (20, 20))
-    kwhs, kwhs_oriflag = d["kwhs"]
-    thresh = np.percentile(kwhs[kwhs_oriflag], 99)
-    overtimes = gen_over_thresh(d, thresh)
-    
-    for i, p in enumerate(overtimes):
-        if i >= 9: break
-        over_fig = fig2.add_subplot(3, 3, i + 1)
-        make_strange_per_fig(d, over_fig, p)
-
-    #plt.savefig("delme.png")
-    plt.show()
-    print "got here"
-    exit()
-
-    fig2 = plt.figure(figsize = (20, 20))
-    weeks = gen_strange_pers(d, 6, period = "week")
-  
-    for i, p in enumerate(weeks):
-        week_fig = fig2.add_subplot(3, 3, i + 1)
-        make_strange_per_fig(d, week_fig, p)
-        print p[0]
-    avg_week = fig2.add_subplot(4, 1, 4)
-    make_avg_week_fig(d, avg_week)
-    plt.savefig("delme.png")
-    exit()
-
-    fig2 = plt.figure(figsize = (20, 20))
-    days = gen_strange_pers(d, 6, period = "day")
-
-
-    for i, p in enumerate(days):
-        day_fig = fig2.add_subplot(3, 3, i + 1)
-        make_strange_per_fig(d, day_fig, p)
-
-    avg_day = fig2.add_subplot(4, 1, 4)
-    make_avg_day_fig(d, avg_day)
-    plt.show()
-    exit()
-
-
-    fig2  = plt.figure(figsize = (10, 10))
-    peaks = fig2.add_subplot(1, 1, 1)
-    peaksgen = gen_peaks(d, 3)
-    for p in peaksgen:
-        print p
-        make_peak_fig(d, peaks, p)
-    plt.show()
-    exit()
-    
-    fig    = plt.figure(figsize = (20, 20))
-    totals = fig.add_subplot(1, 1, 1)
-    make_monthly_usage_fig(d, totals)
-    plt.show()
-    exit()
 
 if __name__ == "__main__":
     #data, desc = qload("agentis_b_records_2011_updated_small.pkl")
