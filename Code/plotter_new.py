@@ -13,10 +13,11 @@ from    matplotlib.colors import LogNorm
 import  cPickle as pickle
 import  pytz
 import  heapq
+
 utc_tz  = pytz.utc
 tz_used = pytz.timezone("US/Central")
 font = {'size'   : 6}
-
+ 
 matplotlib.rc('font', **font)
 states=pickle.load(open('stateDB.pickle','r'))    
 def getSun(stateID, currentTime, city=None):
@@ -119,7 +120,7 @@ def make_text_fig(d, textfig):
         naics_str = ""
 
     toPrint =  "ID:\n   "   + str(bid)\
-        + "\nNaics:\n   "     + str(naics) + naics_str\
+        + "\nNaics:\n   "     + str(naics) + "\n    " + naics_str\
         + "\nType:\n   "    + str(btype)\
         + "\nAverage Hourly Energy Usage:\n    " + str(np.round(np.average(kwhs), 2)) + "kw"\
         + "\nMin:\n    "    + str(np.round(np.min(kwhs), 2))\
@@ -223,7 +224,7 @@ def make_freqs_fig(d, freqs):
         label.set_rotation(30) 
 
 
-def make_temp_vs_kwh_fig(d, tmpsvk):
+def make_temp_vs_kwh_fig(d, tmpsvk, agg_to_day = False):
     """Show a 2d-histogram of temperatures vs kwhs in a given axis.
     
     Parameters:
@@ -234,9 +235,21 @@ def make_temp_vs_kwh_fig(d, tmpsvk):
     temps, temps_oriflag = d["temps"]
 
     both_ori = np.logical_and(temps_oriflag, kwhs_oriflag)
-    tmpsvk.hist2d(temps[both_ori], kwhs[both_ori], bins = 50, norm = LogNorm())
-    
-    tmpsvk.set_title("Temperature vs Energy Usage")
+    if agg_to_day:
+        is_sunday_start = (lambda x: x.weekday() == 6 and x.hour == 0)
+        days, new_times = get_periods(d, 24, is_sunday_start)
+        day_totals      = np.ma.sum(days, axis = 1)
+        print "day_totals.shape:", day_totals.shape
+        temps, new_times = get_periods(d, 24, is_sunday_start, which = "temps")
+        temp_avgs = np.ma.average(temps, axis = 1)
+        #tmpsvk.hist2d(temp_avgs, day_totals, bins = 50, norm = LogNorm())
+        tmpsvk.scatter(temp_avgs, day_totals, alpha = .4)
+        tmpsvk.set_title("Temperature vs Energy Usage (agg days)")
+        
+    else:
+        tmpsvk.hist2d(temps[both_ori], kwhs[both_ori], bins = 50, norm = LogNorm())
+        tmpsvk.set_title("Temperature vs Energy Usage")
+
     tmpsvk.set_xlabel("Temperature")
     tmpsvk.set_ylabel("kwh")
     tmpsvk.grid(True)
@@ -361,7 +374,7 @@ def make_peak_fig(d, ax, ind):
     
 
 
-def make_kwh_vs_sun_fig(d, ax):
+def make_kwh_vs_sun_fig(d, ax, agg_days = False):
     """Show a 2d-histogram of kwhs vs the position of the sun in a given axis.
        Note: Imputed values are ignored.
 
@@ -369,10 +382,6 @@ def make_kwh_vs_sun_fig(d, ax):
     d -- The building record.
     ax -- The axis to hold the figure.
     """
-
-
-
-   
     bid                  = d["bid"]
     naics                = d["naics"]
     btype                = d["btype"]
@@ -380,11 +389,20 @@ def make_kwh_vs_sun_fig(d, ax):
     kwhs, kwhs_oriflag   = d["kwhs"]
     temps, temps_oriflag = d["temps"]
 
-    sun_pos = np.array([max(-100, getSun("IL", t)) for t in times[kwhs_oriflag]])
-    #ax.hist2d(kwhs[kwhs_oriflag], sun_pos, bins = 50, norm = LogNorm())
-    ax.hist2d(sun_pos, kwhs[kwhs_oriflag], bins = 50, norm = LogNorm())
-    
-    ax.set_title("Energy Usage vs sunlight")
+    sun_pos = np.array([max(-100, getSun("IL", t)) for t in times])
+    if agg_days:
+        is_sunday_start = (lambda x: x.weekday() == 6 and x.hour == 0)
+        d["sun_pos"] = (sun_pos, np.array([True for x in sun_pos]))
+        days, new_times = get_periods(d, 24, is_sunday_start)
+        suns, new_times = get_periods(d, 24, is_sunday_start, which = "sun_pos")
+        day_totals = np.ma.sum(days, axis = 1)
+        sun_avgs = np.ma.average(suns, axis = 1)
+        ax.scatter(sun_avgs, day_totals, alpha = .4)
+        ax.set_title("Energy Usage vs sunlight (agg days)")        
+    else:
+        ax.hist2d(sun_pos[kwhs_oriflag], kwhs[kwhs_oriflag], bins = 50, norm = LogNorm())
+        ax.set_title("Energy Usage vs sunlight")        
+
     ax.set_xlabel("Sunlight")
     ax.set_ylabel("kwh")
     ax.grid(True)
@@ -475,24 +493,9 @@ def make_strange_per_fig(d, ax, per):
     ax -- The axis to hold the figure.
     per -- The period yieled from get_strange_pers.
     """
-
-    if len(per) == 2:
-        start, end = per
-        make_interval_plot(d, ax, start, end)
-    else:
-        kvals, tvals, new_times = per
-        ax.plot(new_times, kvals, label = "kwhs")
-        ax.plot(new_times, tvals, label = "temperature")
+    start, end = per
+    make_interval_plot(d, ax, start, end)
     
-        ax.set_title("Beginning " + new_times[0].strftime("%m/%d/%Y"))
-        ax.set_ylabel("kwhs/temperature")
-        labels = ax.get_xticklabels() 
-        for label in labels: 
-            label.set_rotation(30) 
-   
-        ax.grid(True)
-        ax.legend()
-
 def make_extreme_days_figs(d, axhigh, axlow):
     """Show the extreme high and extreme low days (in terms of electricity usage).
     
@@ -653,10 +656,55 @@ def plot_it(d):
     plt.close()
     
 
+def extract_legend(fig):
+    axes = fig.get_axes()
+    handles = []
+    labels  = []
+
+    for ax in axes:
+        hs, ls = ax.get_legend_handles_labels()
+        if len(hs) >= 1:
+            leg = ax.legend()
+            if leg is not None:
+                leg.set_visible(False)
+            for h, l in zip(hs, ls):
+                if l not in labels:
+                    labels.append(l)
+                    handles.append(h)
+    if len(handles) >= 1:
+        fig.legend(handles, labels, "upper right")
+        
+def make_cami_fig(d, ax):
+    kwhs, kwhs_oriflag = d["kwhs"]
+    times = d["times"]
+    is_sunday_start  = (lambda x: x.weekday() == 6 and x.hour == 0)
+    weeks, new_times = get_periods(d, 168, is_sunday_start)
+
+    thresh = np.percentile(weeks, 95, axis = 0)
+    avg_week = np.average(weeks, axis = 0)
+
+    high_avgs = []
+    for col in range(168):
+        inds = weeks[:, col] >thresh[col]
+        high_avgs.append(np.average(weeks[:, col][inds]))
+        #high_avgs.append(np.average(weeks[:, col]))
+
+    high_avgs = np.array(high_avgs)
+    sum_avg = np.sum(avg_week)
+    sum_high = np.sum(high_avgs)
+    plt.title("Cami could have saved you:\n%.2f dollars" % ((sum_high - sum_avg) *.05))
+
+    plt.stackplot(range(168), avg_week, high_avgs-avg_week, colors = ["green", "red"])
+    plt.plot(range(168), thresh, ls = "dotted", color = "black")
+    plt.show()
+    
+
+
 def multi_plot(d):
     fontsize = 36
-    pdf = PdfPages('multipage.pdf')
-    size = (10, 10)
+    pdf = PdfPages('multipage_' + str(d["bid"]) + '.pdf')
+    size = (8.5, 11)
+
     #General/global figure
     g_fig = plt.figure(figsize = size)
     g_text    = g_fig.add_subplot(2, 2, 1)
@@ -669,19 +717,32 @@ def multi_plot(d):
     g_fig.suptitle("BIG OL' TITLE FTW", fontsize = fontsize)
     plt.savefig(pdf, format = 'pdf')
 
-    #Normalness figure
+    #Avg behavior figure
     n_fig = plt.figure(figsize = size)
-    n_avgday  = n_fig.add_subplot(2, 2, 1)
-    n_avgweek = n_fig.add_subplot(2, 2, 2)
-    n_vstemp  = n_fig.add_subplot(2, 2, 3)
-    n_vssun   = n_fig.add_subplot(2, 2, 4)
+    n_avgday  = n_fig.add_subplot(2, 1, 1)
+    n_avgweek = n_fig.add_subplot(2, 1, 2)
 
     make_avg_day_fig(d, n_avgday)
     make_avg_week_fig(d, n_avgweek)
-    make_temp_vs_kwh_fig(d, n_vstemp)
-    make_kwh_vs_sun_fig(d, n_vssun)
 
-    n_fig.suptitle("Behavior", fontsize = fontsize)
+    n_fig.suptitle("Average Behavior", fontsize = fontsize)
+    extract_legend(n_fig)
+    plt.savefig(pdf, format = 'pdf')
+    
+    #Behavior fig
+    b_fig      = plt.figure(figsize = size)
+    b_vstemp   = b_fig.add_subplot(2, 2, 1)
+    b_vssun    = b_fig.add_subplot(2, 2, 2)
+    b_vstempad = b_fig.add_subplot(2, 2, 3)
+    b_vssunad  = b_fig.add_subplot(2, 2, 4)
+
+    make_temp_vs_kwh_fig(d, b_vstemp, False)
+    make_kwh_vs_sun_fig(d, b_vssun)
+    make_temp_vs_kwh_fig(d, b_vstempad, True)
+    make_kwh_vs_sun_fig(d, b_vssunad, True)
+
+    b_fig.suptitle("Average Behavior", fontsize = fontsize)
+    extract_legend(n_fig)
     plt.savefig(pdf, format = 'pdf')
 
     #Appendix figure
@@ -694,6 +755,7 @@ def multi_plot(d):
     make_kwhs_vs_time_fig(d, a_kwhs)
     make_freqs_fig(d, a_freqs)
     a_fig.suptitle("Raw Data", fontsize = fontsize)
+    extract_legend(a_fig)
     plt.savefig(pdf, format = 'pdf')
 
     #outliers 
@@ -718,7 +780,9 @@ def multi_plot(d):
         week_fig.set_title(times[p[0]].strftime("%m/%d/%y") + " - " + 
                           times[p[1]].strftime("%m/%d/%y"))
     o_fig.suptitle("Outliers", fontsize = fontsize)
+    extract_legend(o_fig)
     plt.savefig(pdf, format = 'pdf')
+
 
     #overthresh
     kwhs, kwhs_oriflag = d["kwhs"]
@@ -731,7 +795,8 @@ def multi_plot(d):
         over_fig = ot_fig.add_subplot(3, 3, i + 1)
         make_strange_per_fig(d, over_fig, p)
 
-    ot_fig.suptitle("Times in the top 1%% (>%.2f)" % thresh, fontsize = 36)
+    ot_fig.suptitle("Times in the top 1%%\n (>%.2f)" % thresh, fontsize = 24)
+    extract_legend(ot_fig)
     plt.savefig(pdf, format = 'pdf')
 
     #spikes
@@ -746,10 +811,10 @@ def multi_plot(d):
         ax = s_fig.add_subplot(num_times//2, 2, i+1)
         make_interval_plot(d, ax, left_side, right_side)
         ax.set_title("Spike at " + times[ind].strftime("%m/%d/%y %H:%M:%S"))
-        for x in dir(ax):
-            print x
+
         
     s_fig.suptitle("Spikes", fontsize = fontsize)
+    extract_legend(s_fig)
     plt.savefig(pdf, format = 'pdf')
  
     #extreme days
@@ -761,10 +826,12 @@ def multi_plot(d):
     make_extreme_days_figs(d, axhigh, axlow)
 
     ex_fig.suptitle("Extreme days", fontsize = fontsize)
+    extract_legend(ex_fig)
     plt.savefig(pdf, format = 'pdf')
 
+    plt.subplots_adjust(hspace = .55)
     pdf.close()
-    #plt.subplots_adjust(hspace = .55)
+    
     #plt.show()
 
 
@@ -775,7 +842,16 @@ if __name__ == "__main__":
     #data, desc = qload("agentis_oneyear_19870_updated.pkl")
     #data, desc = qload("agentis_oneyear_18400_updated.pkl")
     #data, desc = qload("agentis_oneyear_21143_updated.pkl")
-    data, desc = qload("agentis_oneyear_22891_updated.pkl")
+    #data, desc = qload("agentis_oneyear_22891_updated.pkl")
+    #data, desc = qload("agentis_oneyear_17340_updated.pkl")
+    #data, desc = qload("agentis_oneyear_22032_updated.pkl")
+    #data, desc = qload("agentis_oneyear_22452_updated.pkl")
+    #data, desc = qload("agentis_oneyear_22203_updated.pkl")
+    #data, desc = qload("agentis_oneyear_22891_updated.pkl")
+    
+    num = sys.argv[1]
+    data, desc = qload("agentis_oneyear_" + num + "_updated.pkl")
+
     data = [data]
     sys.stdout.flush()
     #data = [data[-1]]
@@ -784,9 +860,12 @@ if __name__ == "__main__":
     print "vals for point 0:", len(data[0]["times"])
     print "\n"
     for ind, d in enumerate(data):
-        multi_plot(d)
-        #fig = plt.figure(figsize = (10, 10))
-        #ax = fig.add_subplot(1, 1, 1)
+        #multi_plot(d)
+
+        fig = plt.figure(figsize = (10, 10))
+        ax = fig.add_subplot(1, 1, 1)
+        make_cami_fig(d, ax)
+        
         #make_interval_plot(d, ax, 500, 500+168)
         #plt.show()
         #exit()
