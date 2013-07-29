@@ -2,6 +2,7 @@ import  matplotlib
 #matplotlib.use('Agg')
 from    matplotlib.backends.backend_pdf import PdfPages
 import  ephem
+import  copy
 import  math
 import  sys
 from    utils import *
@@ -13,6 +14,8 @@ from    matplotlib.colors import LogNorm
 import  cPickle as pickle
 import  pytz
 import  heapq
+from    sklearn.cluster import KMeans
+
 
 utc_tz  = pytz.utc
 tz_used = pytz.timezone("US/Central")
@@ -44,18 +47,18 @@ def getSun(stateID, currentTime, city=None):
         except:
             city=states[stateID]['capital'] 
             
-    o.lat    = states[stateID][city][0]
-    o.long   = states[stateID][city][1]
+    o.lat    = float(states[stateID][city][0])
+    o.long   = float(states[stateID][city][1])
     o.date   = dateStamp
     sun = ephem.Sun(o)
     alt=sun.alt
     return math.sin(alt)
 
-def get_periods(d, nobs, first_pred, which = "kwhs", skip_fun = (lambda x: False), wrap_around = False):
+def get_periods(di, nobs, first_pred, which = "kwhs", skip_fun = (lambda x: False), wrap_around = False):
     """Get a collection of periods (e.g., weeks) from a building record.
 
     Parameters:
-    d -- The building record.
+    di -- The building record.
     nobs -- The number (int) of observations for a single period (e.g., 168 for weeks).
     first_pred -- A function which, given a datetime object, returns True if it is the start of the period.
                   For example, first_pred returns True only when the argument is Sunday at Midnight.
@@ -70,6 +73,7 @@ def get_periods(d, nobs, first_pred, which = "kwhs", skip_fun = (lambda x: False
          pers -- The values (e.g., kwhs) of the periods.
          new_times -- The times (datetime objects) associated with the values.
     """
+    d = copy.deepcopy(di) #used so that we don't change di at all
     times                  = d["times"]
     series, series_oriflag = d[which]
     
@@ -239,7 +243,6 @@ def make_temp_vs_kwh_fig(d, tmpsvk, agg_to_day = False):
         is_sunday_start = (lambda x: x.weekday() == 6 and x.hour == 0)
         days, new_times = get_periods(d, 24, is_sunday_start)
         day_totals      = np.ma.sum(days, axis = 1)
-        print "day_totals.shape:", day_totals.shape
         temps, new_times = get_periods(d, 24, is_sunday_start, which = "temps")
         temp_avgs = np.ma.average(temps, axis = 1)
         #tmpsvk.hist2d(temp_avgs, day_totals, bins = 50, norm = LogNorm())
@@ -676,11 +679,11 @@ def extract_legend(fig):
         
 def make_cami_fig(d, ax):
     kwhs, kwhs_oriflag = d["kwhs"]
-    times = d["times"]
-    is_sunday_start  = (lambda x: x.weekday() == 6 and x.hour == 0)
-    weeks, new_times = get_periods(d, 168, is_sunday_start)
+    times              = d["times"]
+    is_sunday_start    = (lambda x: x.weekday() == 6 and x.hour == 0)
+    weeks, new_times   = get_periods(d, 168, is_sunday_start)
 
-    thresh = np.percentile(weeks, 95, axis = 0)
+    thresh   = np.percentile(weeks, 95, axis = 0)
     avg_week = np.average(weeks, axis = 0)
 
     high_avgs = []
@@ -692,13 +695,45 @@ def make_cami_fig(d, ax):
     high_avgs = np.array(high_avgs)
     sum_avg = np.sum(avg_week)
     sum_high = np.sum(high_avgs)
-    plt.title("Cami could have saved you:\n%.2f dollars" % ((sum_high - sum_avg) *.05))
+    ax.set_title("Cami could have saved you:\n%.2f dollars" % ((sum_high - sum_avg) *.05))
 
-    plt.stackplot(range(168), avg_week, high_avgs-avg_week, colors = ["green", "red"])
-    plt.plot(range(168), thresh, ls = "dotted", color = "black")
-    plt.show()
+    ax.stackplot(range(168), avg_week, high_avgs-avg_week, colors = ["green", "red"])
+    ax.plot(range(168), thresh, ls = "dotted", color = "black")
     
+    
+def make_cluster_fig(d, types_ax, times_ax):
+    kwhs, kwhs_oriflag = d["kwhs"]
+    times              = d["times"]
 
+    is_sunday_start  = (lambda x: x.weekday() == 6 and x.hour == 0)
+    #oridays, new_times = get_periods(data, 24, is_sunday_start)
+    days, new_times = get_periods(d, 24, is_sunday_start)
+    oridays = copy.copy(days)
+
+    times_ax.plot(times, kwhs, lw=0.5, c="black")
+    for day in days:
+        day -= np.average(day)#center each day
+
+    num_clusters = 3 #TODO: auto-pick num_clusters
+    kmeans = KMeans(init='k-means++', n_clusters=num_clusters, n_init=10)
+    kmeans.fit(days)
+    preds = kmeans.predict(days)
+    
+    cmap = {0 : "green",
+            1 : "blue",
+            2 : "red",
+            3 : "purple"}
+    for c in range(len(kmeans.cluster_centers_)):
+        center = kmeans.cluster_centers_[c]
+        types_ax.plot(center, label = "# days: " + str(len(preds[preds == c])), c = cmap[c])        
+    #TODO: make colors consistent between runs by selecting them based on relative size of cluster    
+    types_ax.legend()
+    
+    for i, d in enumerate(oridays):
+        times_ax.plot(new_times[i], d, c = cmap[preds[i]])
+
+
+    
 
 def multi_plot(d):
     fontsize = 36
@@ -829,10 +864,27 @@ def multi_plot(d):
     extract_legend(ex_fig)
     plt.savefig(pdf, format = 'pdf')
 
+    #clustering fig
+    c_fig      = plt.figure(figsize = size)
+    types_ax   = c_fig.add_subplot(2, 2, 1)
+    times_ax   = c_fig.add_subplot(2, 1, 2)
+    make_cluster_fig(d, types_ax, times_ax)
+
+    c_fig.suptitle("Types of days", fontsize = fontsize)
+
+    plt.savefig(pdf, format = 'pdf')
+
+    #Cami fig
+    cami_fig = plt.figure(figsize = size)
+    ax = cami_fig.add_subplot(1, 1, 1)
+    make_cami_fig(d, ax)
+    cami_fig.suptitle("SAVE ALL THE MONIES", fontsize = fontsize)
+    plt.savefig(pdf, format = 'pdf')
+
+
     plt.subplots_adjust(hspace = .55)
     pdf.close()
-    
-    #plt.show()
+
 
 
 
@@ -860,16 +912,7 @@ if __name__ == "__main__":
     print "vals for point 0:", len(data[0]["times"])
     print "\n"
     for ind, d in enumerate(data):
-        #multi_plot(d)
-
-        fig = plt.figure(figsize = (10, 10))
-        ax = fig.add_subplot(1, 1, 1)
-        make_cami_fig(d, ax)
-        
-        #make_interval_plot(d, ax, 500, 500+168)
-        #plt.show()
-        #exit()
-        #plot_it(d)
+        multi_plot(d)
         #bid = d["bid"]
         #print str(ind), ": plotted something..."
         sys.stdout.flush()

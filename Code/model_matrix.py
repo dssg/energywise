@@ -16,7 +16,7 @@ def change_mat(ts,d):
         b = np.array(ts[(d-r):(n-r)])
         x = np.concatenate([x.reshape(len(x),-1),b.reshape(len(b),-1)],axis=1)
     return x
-        
+         
 def mat_from_building_pkl(b,md,dt=None,ds=None,dw=None,h=None,td=None):
     """Receive a building dictionary.
        md = number of autoregressive factors in kwhs
