@@ -11,14 +11,9 @@ def cd(year,month,fdw,nwe):
         if fdm == fdw:
             day = 7 * (nwe - 1) + 1
         elif fdm >= fdw:
-            day = 7 * nwe - (fdm - fdw - 1)  
-            #day = 7*(fdw + 1) * nwe - (7 - fdm + fdw)
-            #day = 7*nwe - (aux-fdw-1)
-            
+            day = 7 * nwe - (fdm - fdw - 1)           
         else:
             day = 7 * (nwe - 1) + (fdw - fdm + 1)
-            #day = 7*nwe - (fdw-fdm+3)             
-            #day = 7*nwe + (fdw-aux+1)  
         return day
     elif nwe == -1:
         day = ndm - (date(year,month,ndm).weekday() - fdw)
@@ -41,10 +36,10 @@ def yfhol(year):
     #[cd(year,keys[k][0],keys[k][1],keys[k][2]), for k in keys if isinstance(keys[k],list)]
     for k in keys:
         if isinstance(keys[k],list):
-            print k
+            #print k
             day = cd(year,keys[k][0],keys[k][1],keys[k][2])
             keys[k] = date(year,keys[k][0],day)
-            print keys[k]   
+            #print keys[k]   
     return keys
     
 def is_hol(date):
