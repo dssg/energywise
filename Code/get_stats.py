@@ -146,6 +146,35 @@ def diff_mean(b,p):
     return pers.reshape(-1)
 
 
+def dft_analysis(d):
+     kwhs, kwhs_oriflag = d["kwhs"]
+     times = d["times"]
+
+     kwhs  = kwhs[:168*4]
+     times = times[:168*4]
+
+     mean = np.average(kwhs)
+
+     a = np.fft.fft(kwhs)
+     
+     biggest = heapq.nlargest(50, a, np.abs)
+     lowest_high = np.min([abs(x) for x in biggest])
+     for i in range(len(a)):
+          if np.abs(a[i]) < np.abs(lowest_high):
+               a[i] = 0
+     back_again = np.fft.ifft(a)
+
+     fig = plt.figure(figsize = (10, 10))
+     ori_ax = fig.add_subplot(2, 1, 1)
+     back_ax = fig.add_subplot(2, 1, 2)
+     
+     ori_ax.plot(times, kwhs)
+     back_ax.plot(times, back_again)
+     plt.show()
+     print np.sum(kwhs), "<- old"
+     print np.sum(back_again), "<- new"
+     
+
 if __name__ == "__main__":
     #Example for get_stats
     data, desc = qload("agentis_b_records_2011_updated_small.pkl")
@@ -157,10 +186,11 @@ if __name__ == "__main__":
     print "vals for point 0:", len(data[0]["times"])
     print "\n"
     for ind, d in enumerate(data):
-        print get_stats(d)
+        #print get_stats(d)
+        dft_analysis(d)
         sys.stdout.flush()
         
     #Example for diff_mean
-    b = {"kwhs":[np.array(range(1,49)),data["kwhs"][1][-48:]], "temps":[np.array(range(1,49)),
-"nada"], "times": data["times"][-48:]}
-    diff_mean(b,24)
+    #b = {"kwhs":[np.array(range(1,49)),data["kwhs"][1][-48:]], "temps":[np.array(range(1,49)),
+#"nada"], "times": data["times"][-48:]}
+    #diff_mean(b,24)
