@@ -2,7 +2,7 @@ import numpy as np
 import pytz
 import time
 from utils import *
-from getSunny import *
+from plotter_new import getSun
 from holiday import *
 from datetime import datetime
 from dateutil import tz
@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
     # Example 2: delay in temp smaller than delay in x's
     data, desc = qload("agentis_oneyear_22891_updated.pkl",loc="C:/Users/Andrea/Documents/DSSG/Energy project/Codigos prueba/Scikit matrix for bid/")
-    print mat_from_building_pkl(data,md=4,dw=1)
+    print mat_from_building_pkl(data,md=4,ds=1,dw=1)
     
     # Example 3
     d = {"kwhs":[[1,2,3,4,5,6,7,8,9,10],"nada"], "temps":[[1,2,3,4,5,6,7,8,9,10],
