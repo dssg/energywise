@@ -672,7 +672,7 @@ def make_cami_fig(d, ax):
     ax.stackplot(range(168), avg_week, high_avgs-avg_week, colors = ["green", "red"])
     ax.plot(range(168), thresh, ls = "dotted", color = "black")
     
-    
+
 def make_cluster_fig(d, types_ax, times_ax):
     kwhs, kwhs_oriflag = d["kwhs"]
     times              = d["times"]
@@ -685,23 +685,33 @@ def make_cluster_fig(d, types_ax, times_ax):
     times_ax.plot(times, kwhs, lw=0.5, c="black")
     for day in days:
         day -= np.average(day)#center each day
+    
+    for c in range(24):
+        print np.average(days[:, c])
+        print np.std(days[:, c])
+        print ""
+      
+        # days[:, c] /= np.linalg.norm(days[:, c])
 
     num_clusters = 3 #TODO: auto-pick num_clusters
-    #kmeans = KMeans(init='k-means++', n_clusters=num_clusters, n_init=10)
-    kmeans = mixture.GMM(n_components=3, covariance_type='full')
-    kmeans.fit(days)
-    preds = kmeans.predict(days)
-    centers = kmeans.means_    
+    clusterer = KMeans(init='k-means++', n_clusters=num_clusters, n_init=10)
+    #clusterer = mixture.GMM(n_components=3, covariance_type='full')
+    #clusterer = mixture.DPGMM(n_components=3, covariance_type='full')
+    clusterer.fit(days)
+    preds = clusterer.predict(days)
+    #centers = clusterer.means_    
+    centers = clusterer.cluster_centers_
     num_in_each = []
     for c in range(len(centers)):
         num_in_each.append(len(preds[preds == c]))
     print num_in_each
     sorted_inds = [x[1] for x in sorted(zip(num_in_each, range(len(num_in_each))), reverse = True)]
 
-    cmap = dict(zip(sorted_inds, ["green", "blue", "red"]))
+    colors = ["green", "blue", "red", "purple", "pink", "black", "grey"]
+    colors = colors[:len(centers)]
+    cmap = dict(zip(sorted_inds, colors))
 
     for c, center in enumerate(centers):
-
         types_ax.plot(center, label = "# days: " + str(len(preds[preds == c])), c = cmap[c])        
 
 
@@ -711,20 +721,19 @@ def make_cluster_fig(d, types_ax, times_ax):
     for i, d in enumerate(oridays):
         times_ax.plot(new_times[i], d, c = cmap[preds[i]])
 
-
 def multi_plot(d):
     fontsize = 36
     pdf = PdfPages('multipage_' + str(d["bid"]) + '.pdf')
-    size = (8.5, 11)
-
-    add_fig(pdf, "general",      size = size, fontsize = fontsize)
-    add_fig(pdf, "avg behavior", size = size, fontsize = fontsize)
-    add_fig(pdf, "behavior",     size = size, fontsize = fontsize)
-    add_fig(pdf, "raw",          size = size, fontsize = fontsize)
-    add_fig(pdf, "outliers",     size = size, fontsize = fontsize)
-    add_fig(pdf, "overthresh",   size = size, fontsize = fontsize)
-    add_fig(pdf, "spikies",      size = size, fontsize = fontsize)
-    add_fig(pdf, "extreme days", size = size, fontsize = fontsize)
+    #size = (8.5, 11)
+    size = (13.6, 7.7)
+    #add_fig(pdf, "general",      size = size, fontsize = fontsize)
+    #add_fig(pdf, "avg behavior", size = size, fontsize = fontsize)
+    #add_fig(pdf, "behavior",     size = size, fontsize = fontsize)
+    #add_fig(pdf, "raw",          size = size, fontsize = fontsize)
+    #add_fig(pdf, "outliers",     size = size, fontsize = fontsize)
+    #add_fig(pdf, "overthresh",   size = size, fontsize = fontsize)
+    #add_fig(pdf, "spikies",      size = size, fontsize = fontsize)
+    #add_fig(pdf, "extreme days", size = size, fontsize = fontsize)
     add_fig(pdf, "clustering",   size = size, fontsize = fontsize)
     #add_fig(pdf, "cami",         size = size, fontsize = fontsize)
     pdf.close()

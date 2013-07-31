@@ -186,8 +186,8 @@ if __name__ == "__main__":
     print "vals for point 0:", len(data[0]["times"])
     print "\n"
     for ind, d in enumerate(data):
-        #print get_stats(d)
-        dft_analysis(d)
+        print get_stats(d)
+        #dft_analysis(d)
         sys.stdout.flush()
         
     #Example for diff_mean

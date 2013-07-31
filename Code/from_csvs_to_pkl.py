@@ -1,4 +1,4 @@
-from os import listdir
+from    os import listdir
 from    utils import data_loc, fig_loc, qload, qdump
 from    utils import fill_in, daterange
 from    collections import defaultdict
