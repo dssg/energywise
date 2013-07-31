@@ -56,6 +56,7 @@ def plot_agg_reports(agg, add_str = ""):
         ax.hist(agg[k], bins = num_bins)
         ax.set_title(k)
         plt.savefig(fig_loc + "agg_reports_" + k + add_str +  ".png")
+        plt.close()
 
 if __name__ == "__main__":
     finns = [x for x in listdir(data_loc) if "_updated.pkl" in x and "oneyear" in x][:10]
