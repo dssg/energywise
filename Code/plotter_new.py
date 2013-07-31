@@ -22,7 +22,9 @@ tz_used = pytz.timezone("US/Central")
 font = {'size'   : 6}
  
 matplotlib.rc('font', **font)
-states=pickle.load(open('stateDB.pickle','r'))    
+#states=pickle.load(open('stateDB.pickle','r'))    
+states = qload("stateDB.pickle")
+
 def getSun(stateID, currentTime, city=None):
     """Get the position of the sun at a given time and location.
     
