@@ -61,14 +61,18 @@ def plot_agg_reports(agg, add_str = ""):
 if __name__ == "__main__":
     finns = [x for x in listdir(data_loc) if "_updated.pkl" in x and "oneyear" in x][:10]
     ds = []
+    print len(finns)
+    exit()
     for finn in finns:
         d, desc = qload(finn)
         ds.append(d)
         
-    agg = agg_reports(ds)
-    qdump((agg, "The aggregate reports"), "agg_reps.pkl")
-    exit()
+    #agg = agg_reports(ds)
+    #qdump((agg, "The aggregate reports"), "agg_reps.pkl")
+
     naicss = [d["naics"] for d in ds]
+    qdump((naicss, "The NAICS codes in the same order as the agg report"), "naics_codes.pkl") 
+    exit()
     for naics in naicss:
         new_ds = [d for d in ds if d["naics"] == naics]
         agg = agg_reports(new_ds)
@@ -76,3 +80,4 @@ if __name__ == "__main__":
 
     #agg = agg_reports(ds)
     #plot_agg_reports(agg)
+ 
