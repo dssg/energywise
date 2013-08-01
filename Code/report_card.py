@@ -65,6 +65,9 @@ if __name__ == "__main__":
         d, desc = qload(finn)
         ds.append(d)
         
+    agg = agg_reports(ds)
+    qdump((agg, "The aggregate reports"), "agg_reps.pkl")
+    exit()
     naicss = [d["naics"] for d in ds]
     for naics in naicss:
         new_ds = [d for d in ds if d["naics"] == naics]
