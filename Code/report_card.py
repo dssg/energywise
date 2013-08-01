@@ -33,7 +33,9 @@ def get_report(d):
 
 def agg_reports(list_of_brecs):
     toR = {}
+    naics_codes = []
     for d in list_of_brecs:
+        
         try:
             r = get_report(d)
             for k in r.keys():
@@ -41,12 +43,15 @@ def agg_reports(list_of_brecs):
                     toR[k].append(r[k])
                 else:
                     toR[k] = [r[k]]
+            naics_codes.append(d["naics"])
+
         except Exception as inst:
             print "Failed", d["bid"]
             print type(inst)     # the exception instance
             print inst.args      # arguments stored in .args
             print inst           # __str__ allows args to printed directly
-    return toR
+            
+    return toR, naics_codes
 
 def plot_agg_reports(agg, add_str = ""):
     for k in agg.keys():
@@ -59,7 +64,7 @@ def plot_agg_reports(agg, add_str = ""):
         plt.close()
 
 if __name__ == "__main__":
-    finns = [x for x in listdir(data_loc) if "_updated.pkl" in x and "oneyear" in x][:10]
+    finns = [x for x in listdir(data_loc) if "_updated.pkl" in x and "oneyear" in x]
     ds = []
     print len(finns)
     exit()
@@ -67,10 +72,10 @@ if __name__ == "__main__":
         d, desc = qload(finn)
         ds.append(d)
         
-    #agg = agg_reports(ds)
+    agg, naicss = agg_reports(ds)
     #qdump((agg, "The aggregate reports"), "agg_reps.pkl")
 
-    naicss = [d["naics"] for d in ds]
+    #naicss = [d["naics"] for d in ds]
     qdump((naicss, "The NAICS codes in the same order as the agg report"), "naics_codes.pkl") 
     exit()
     for naics in naicss:
