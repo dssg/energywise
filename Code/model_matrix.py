@@ -1,8 +1,8 @@
 import numpy as np
 import pytz
 import time
-from utils import *
-from getSunny import *
+#from utils import *
+#from getSunny import *
 from holiday import *
 from datetime import datetime
 from dateutil import tz
@@ -40,10 +40,10 @@ def mat_from_building_pkl(b,md,dt=None,ds=None,dw=None,h=None,td=None):
         [names.append("t_t-"+str(i)) for i in range(1,dt+1)]
     array_times=change_mat(b['times'],md)
     num_rows=len(array_times)
-    if ds is not None:
-        x_sun=np.array([getSun("IL",array_times[i][-1]) for i in range(num_rows)])
-        x = np.concatenate((x,x_sun.reshape(len(x_sun),-1)),axis=1)
-        names.append("sun")
+#    if ds is not None:
+#        x_sun=np.array([getSun("IL",array_times[i][-1]) for i in range(num_rows)])
+#        x = np.concatenate((x,x_sun.reshape(len(x_sun),-1)),axis=1)
+#        names.append("sun")
     if dw is not None:
         # returns an integer from 0-6
         # 0 is monday... 6 is sunday
@@ -69,12 +69,10 @@ if __name__ == "__main__":
     md = 4
     change_mat(ts,md)
     # Example 2: delay in temp smaller than delay in x's
-    data, desc = qload("agentis_oneyear_22891_updated.pkl",loc="")
-    mat_from_building_pkl(data,md=4,dt=2)
+    data, desc = qload("agentis_oneyear_22891_updated.pkl",loc="D:/DSSG/Data/")
+    mdata=mat_from_building_pkl(data,md=4,dt=2)
     
     #Example 3
     d = {"kwhs":[[1,2,3,4,5,6,7,8,9,10],"nada"], "temps":[[1,2,3,4,5,6,7,8,9,10],
 "nada"], "times": data["times"][-10:]}
     y=mat_from_building_pkl(d,md=4,dt=3,ds=1,dw=1,h=1,td=1)
-    
-   
