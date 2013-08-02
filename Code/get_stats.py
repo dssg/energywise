@@ -1,6 +1,7 @@
 import sys
 from utils import data_loc, fig_loc, qload, qdump, interp, clean
 import numpy as np
+from plotter_new import *
 from datetime import datetime
 import time as itime
 import matplotlib.pyplot as plt
@@ -125,8 +126,57 @@ def get_stats(d):
           report += "\t" + highest_date.strftime("%m/%d/%Y %H:%M:%S") + " -> " + str(highest_val) + "kwh\n"
      return report
 
+def diff_mean(b,p):
+    """Calcualte the difference from a specified time period's mean of each 
+       element in a list .
+    
+    Parameters:
+    b  -- building record
+    p  -- Period (in hours) in which to divide the time series.
+    
+    Returns:
+    List of len(t) in which each difference from mean is represented.
+    """
+    is_midnight     = (lambda x: x.hour == 0)
+    pers, new_times = get_periods(b, 24, is_midnight, "kwhs")
+    pers = np.ma.filled(pers)
+    avg_pers        = np.average(pers, axis = 1)
+    for avg, p in zip(avg_pers, pers):
+            p -= avg
+    return pers.reshape(-1)
+
+
+def dft_analysis(d):
+     kwhs, kwhs_oriflag = d["kwhs"]
+     times = d["times"]
+
+     kwhs  = kwhs[:168*4]
+     times = times[:168*4]
+
+     mean = np.average(kwhs)
+
+     a = np.fft.fft(kwhs)
+     
+     biggest = heapq.nlargest(50, a, np.abs)
+     lowest_high = np.min([abs(x) for x in biggest])
+     for i in range(len(a)):
+          if np.abs(a[i]) < np.abs(lowest_high):
+               a[i] = 0
+     back_again = np.fft.ifft(a)
+
+     fig = plt.figure(figsize = (10, 10))
+     ori_ax = fig.add_subplot(2, 1, 1)
+     back_ax = fig.add_subplot(2, 1, 2)
+     
+     ori_ax.plot(times, kwhs)
+     back_ax.plot(times, back_again)
+     plt.show()
+     print np.sum(kwhs), "<- old"
+     print np.sum(back_again), "<- new"
+     
 
 if __name__ == "__main__":
+    #Example for get_stats
     data, desc = qload("agentis_b_records_2011_updated_small.pkl")
     #data, desc = qload("agentis_b_records_2011_updated.pkl")
     sys.stdout.flush()
@@ -137,4 +187,10 @@ if __name__ == "__main__":
     print "\n"
     for ind, d in enumerate(data):
         print get_stats(d)
+        #dft_analysis(d)
         sys.stdout.flush()
+        
+    #Example for diff_mean
+    #b = {"kwhs":[np.array(range(1,49)),data["kwhs"][1][-48:]], "temps":[np.array(range(1,49)),
+#"nada"], "times": data["times"][-48:]}
+    #diff_mean(b,24)

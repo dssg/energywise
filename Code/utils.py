@@ -1,12 +1,43 @@
 import numpy as np
 import cPickle as pickle
+from   scipy.spatial import distance
 #data_loc = "../Data/"
 #data_loc = "/mnt/energy_data/Data/"
 data_loc = "C:/Users/Scott/Data/"
 
 fig_loc = "../Figs/"
 
-def qload(finn, loc = ""):
+
+def dCorr(x, y):
+    """Returns the distance-correlation between x and y"""
+    n = len(x)
+    assert n == len(y), "Vectors must be of the same length"
+    def dCov2(xM, yM):
+        """Returns the distance-covariance squared of x and y, given the pairwise
+        distance matrices xM and yM."""
+        return (1.0 / n**2) * np.sum(xM * yM) #sum of all entries in component-wise product
+        
+
+    A = distance.squareform(distance.pdist(np.array(x).reshape(n, -1)))
+    B = distance.squareform(distance.pdist(np.array(y).reshape(n, -1)))
+
+    #Center along both axes:
+    A -= A.mean(axis = 0)
+    B -= B.mean(axis = 0)
+
+    A -= A.mean(axis = 1)
+    B -= B.mean(axis = 1)
+
+    #Calculate distance covariances
+    dcov  = np.sqrt(dCov2(A, B))
+    dvarx = np.sqrt(dCov2(A, A))
+    dvary = np.sqrt(dCov2(B, B))
+    return dcov / np.sqrt(dvarx * dvary)
+    
+ 
+   
+    
+def qload(finn, loc = ""): 
     """Unpickles from file with name finn"""
     if loc == "":
         loc = data_loc
