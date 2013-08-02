@@ -37,7 +37,7 @@ def dCorr(x, y):
  
    
     
-def qload(finn, loc = ""):
+def qload(finn, loc = ""): 
     """Unpickles from file with name finn"""
     if loc == "":
         loc = data_loc
