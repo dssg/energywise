@@ -21,9 +21,9 @@ utc_tz  = pytz.utc
 tz_used = pytz.timezone("US/Central")
 font = {'size'   : 6}
  
-matplotlib.rc('font', **font)
+
 #states=pickle.load(open('stateDB.pickle','r'))    
-states = qload("stateDB.pickle")
+
 
 def getSun(stateID, currentTime, city=None):
     """Get the position of the sun at a given time and location.
@@ -397,10 +397,10 @@ def make_kwh_vs_sun_fig(d, ax, agg_days = False):
 
     sun_pos = np.array([max(-100, getSun("IL", t)) for t in times])
     if agg_days:
-        is_sunday_start = (lambda x: x.weekday() == 6 and x.hour == 0)
+        is_midnight = (lambda x: x.hour == 0)
         d["sun_pos"] = (sun_pos, np.array([True for x in sun_pos]))
-        days, new_times = get_periods(d, 24, is_sunday_start)
-        suns, new_times = get_periods(d, 24, is_sunday_start, which = "sun_pos")
+        days, new_times = get_periods(d, 24, is_midnight)
+        suns, new_times = get_periods(d, 24, is_midnight, which = "sun_pos")
         day_totals = np.ma.sum(days, axis = 1)
         sun_avgs = np.ma.average(suns, axis = 1)
         ax.scatter(sun_avgs, day_totals, alpha = .4)
@@ -725,17 +725,17 @@ def make_cluster_fig(d, types_ax, times_ax):
 
 def multi_plot(d):
     fontsize = 36
-    pdf = PdfPages('multipage_' + str(d["bid"]) + '.pdf')
+    pdf = PdfPages(fig_loc + 'multipage_' + str(d["bid"]) + '.pdf')
     #size = (8.5, 11)
     size = (13.6, 7.7)
-    #add_fig(pdf, "general",      size = size, fontsize = fontsize)
-    #add_fig(pdf, "avg behavior", size = size, fontsize = fontsize)
-    #add_fig(pdf, "behavior",     size = size, fontsize = fontsize)
-    #add_fig(pdf, "raw",          size = size, fontsize = fontsize)
-    #add_fig(pdf, "outliers",     size = size, fontsize = fontsize)
-    #add_fig(pdf, "overthresh",   size = size, fontsize = fontsize)
-    #add_fig(pdf, "spikies",      size = size, fontsize = fontsize)
-    #add_fig(pdf, "extreme days", size = size, fontsize = fontsize)
+    add_fig(pdf, "general",      size = size, fontsize = fontsize)
+    add_fig(pdf, "avg behavior", size = size, fontsize = fontsize)
+    add_fig(pdf, "behavior",     size = size, fontsize = fontsize)
+    add_fig(pdf, "raw",          size = size, fontsize = fontsize)
+    add_fig(pdf, "outliers",     size = size, fontsize = fontsize)
+    add_fig(pdf, "overthresh",   size = size, fontsize = fontsize)
+    add_fig(pdf, "spikies",      size = size, fontsize = fontsize)
+    add_fig(pdf, "extreme days", size = size, fontsize = fontsize)
     add_fig(pdf, "clustering",   size = size, fontsize = fontsize)
     #add_fig(pdf, "cami",         size = size, fontsize = fontsize)
     pdf.close()
@@ -894,6 +894,8 @@ def add_fig(pdf, which, size, fontsize = 36):
 
 
 if __name__ == "__main__":
+    matplotlib.rc('font', **font)
+    states = qload("stateDB.pickle")
     #data, desc = qload("agentis_b_records_2011_updated_small.pkl")
     #data, desc = qload("agentis_b_records_2011_updated.pkl")
     #data, desc = qload("agentis_oneyear_19870_updated.pkl")
