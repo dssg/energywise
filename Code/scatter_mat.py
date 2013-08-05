@@ -3,14 +3,17 @@ from collections import Counter
 import random
 from utils import *
 import numpy as np
+import matplotlib
+#matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from plotter_new import extract_legend
 import matplotlib.cm as cm
 
-def make_scatter_mat_fig(fig, mat, names = None, colors = None, color_map = None):
+def make_scatter_mat_fig(fig, mat, names = None, colors = None, color_map = None, target = None):
+    #Note: Target is a report
     nrows, ncols = mat.shape
-   
+    
     for frow in range(ncols):
         for fcol in range(ncols):
             col1 = mat[:, frow]
@@ -20,11 +23,19 @@ def make_scatter_mat_fig(fig, mat, names = None, colors = None, color_map = None
 
             if frow == fcol:
                 ax.hist(col1)
+                if target is not None:
+                    target_x = target[names[frow]]
+                    ax.axvline(target_x, 0, 1, ls = "dotted", c = "black", label = "Target")
             else:
                 mins = min(np.min(col1), np.min(col2))
                 maxs = max(np.max(col1), np.max(col2))
                 
                 ax.plot([mins,maxs], [mins,maxs], ls = "dashed", color = "black", label = r"$x = y$") 
+                if target is not None:
+                    target_x = target[names[fcol]]
+                    target_y = target[names[frow]]
+                    ax.axhline(target_x, 0, 1, ls = "dotted", c = "black", label = "Target")
+                    ax.axvline(target_y, 0, 1, ls = "dotted", c = "black", label = "Target")
 
                 if frow > fcol:
                     if colors is not None:
@@ -34,7 +45,7 @@ def make_scatter_mat_fig(fig, mat, names = None, colors = None, color_map = None
                             else:
                                 label = str(c)
 
-                            ax.scatter(col2[colors == c], col1[colors == c], c = colors[colors == c], label = label, alpha = .4)
+                            ax.scatter(col2[colors == c], col1[colors == c], c = colors[colors == c], label = label, alpha = .4, lw = 0, s = 3)
                     else:
                         ax.scatter(col2, col1, alpha = .4, c = "purple", lw = 0)
                     ax.set_xlim(np.min(col2), np.max(col2))
@@ -90,15 +101,17 @@ def get_dummy_data():
     return dat, names, colors, color_map
 
 if __name__ == "__main__":
-    """
-    agg, desc = qload("agg_reps_small.pkl")
-    dat, names = from_agg_report_to_mat(agg)
-    qdump(((dat, names), "A tuple (dat, names) from the agg report"), "agg_mat_small.pkl")
-    """
+    if False:#True:
+        agg, desc = qload("agg_reps.pkl")
+        dat, names = from_agg_report_to_mat(agg)
+        qdump(((dat, names), "A tuple (dat, names) from the agg report"), "agg_mat.pkl")
+        exit()
+
     big = True
     add_str = ""
     #add_str = "_small"
     if big:
+        target = None
         t, desc = qload("agg_mat" + add_str + ".pkl")
         dat, names = t
         colors, desc = qload("naics_codes" + add_str + ".pkl")
@@ -110,7 +123,7 @@ if __name__ == "__main__":
         unique_colors = set(colors)
         cmap = {}
         i = 0
-        mycolors = "bgrcmykw"
+        mycolors = "bgrcmyk"
         
         for c in unique_colors:
             thecolor = mycolors[i % len(mycolors)]
@@ -118,22 +131,20 @@ if __name__ == "__main__":
             i += 1
             color_map[thecolor] = c
         colors = np.array([cmap[c] for c in colors])
-        figsize = (100, 100)
-
+        figsize = (30, 30)
     else:
         dat, names, colors, color_map = get_dummy_data()
+        target = dict(Glory = 1.4, Teamwork = 2.3, Confidence = 4.2, Procastination = 3.0)
         figsize = (10, 10)
 
-        
     fig = plt.figure(figsize = figsize)
 
-
-    make_scatter_mat_fig(fig, dat, colors = colors, names = names, color_map = color_map)
+    make_scatter_mat_fig(fig, dat, colors = colors, names = names, color_map = color_map, target = target)
     if big:
-        plt.savefig(fig_loc + "agg_big_no9999" + add_str + ".png", bbox_inches='tight')
+        plt.savefig(fig_loc + "agg_no9999" + add_str + ".png", bbox_inches='tight', dpi = 300)
         #plt.savefig("agg.pdf", bbox_inches='tight')
 
-        plt.show()
+        #plt.show()
     else:
         plt.show()
 
