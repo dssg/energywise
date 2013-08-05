@@ -32,7 +32,11 @@ def dCorr(x, y):
     dcov  = np.sqrt(dCov2(A, B))
     dvarx = np.sqrt(dCov2(A, A))
     dvary = np.sqrt(dCov2(B, B))
-    return dcov / np.sqrt(dvarx * dvary)
+    toR = dcov / np.sqrt(dvarx * dvary)
+    if np.isnan(toR):
+        return 0.0
+    else:
+        return toR
     
  
    

@@ -1,3 +1,4 @@
+import  report_card
 import  matplotlib
 #matplotlib.use('Agg')
 from    matplotlib.backends.backend_pdf import PdfPages
@@ -128,13 +129,19 @@ def make_text_fig(d, textfig):
         naics_str = naics_str.replace("and ", "and\n") #TODO: Figure out better way
     toPrint =  "ID:\n   "   + str(bid)\
         + "\nNaics:\n   "     + str(naics) + "\n    " + naics_str\
-        + "\nType:\n   "    + str(btype)\
-        + "\nAverage Hourly Energy Usage:\n    " + str(np.round(np.average(kwhs), 2)) + "kw"\
-        + "\nMin:\n    "    + str(np.round(np.min(kwhs), 2))\
-        + "\nMax:\n    "    + str(np.round(np.max(kwhs), 2))\
-        + "\nTotal:\n     " + str(np.round(np.sum(kwhs)/1000.0, 2)) + "gwh"
+        + "\nType:\n   "    + str(btype)
+        #+ "\nAverage Hourly Energy Usage:\n    " + str(np.round(np.average(kwhs), 2)) + "kw"\
+        #+ "\nMin:\n    "    + str(np.round(np.min(kwhs), 2))\
+        #+ "\nMax:\n    "    + str(np.round(np.max(kwhs), 2))\
+        #+ "\nTotal:\n     " + str(np.round(np.sum(kwhs)/1000.0, 2)) + "gwh"
+
+    toPrint += "\n"
+    rep = report_card.get_report(d)
+    width = 50
+    for k in rep.keys():
+        toPrint += k + ":\n" + ("%.2f" % rep[k]).rjust(width) + "\n"
+
     textfig.text(0.05, .95, toPrint, fontsize=10, ha='left', va='top')
-    
     textfig.set_xticks([])
     textfig.set_yticks([])
     
@@ -688,14 +695,9 @@ def make_cluster_fig(d, types_ax, times_ax):
     for day in days:
         day -= np.average(day)#center each day
     
-    for c in range(24):
-        print np.average(days[:, c])
-        print np.std(days[:, c])
-        print ""
-      
         # days[:, c] /= np.linalg.norm(days[:, c])
 
-    num_clusters = 3 #TODO: auto-pick num_clusters
+    num_clusters = 5 #TODO: auto-pick num_clusters
     clusterer = KMeans(init='k-means++', n_clusters=num_clusters, n_init=10)
     #clusterer = mixture.GMM(n_components=3, covariance_type='full')
     #clusterer = mixture.DPGMM(n_components=3, covariance_type='full')
@@ -706,7 +708,7 @@ def make_cluster_fig(d, types_ax, times_ax):
     num_in_each = []
     for c in range(len(centers)):
         num_in_each.append(len(preds[preds == c]))
-    print num_in_each
+
     sorted_inds = [x[1] for x in sorted(zip(num_in_each, range(len(num_in_each))), reverse = True)]
 
     colors = ["green", "blue", "red", "purple", "pink", "black", "grey"]
@@ -726,8 +728,8 @@ def make_cluster_fig(d, types_ax, times_ax):
 def multi_plot(d):
     fontsize = 36
     pdf = PdfPages(fig_loc + 'multipage_' + str(d["bid"]) + '.pdf')
-    #size = (8.5, 11)
-    size = (13.6, 7.7)
+    size = (8.5, 11)
+    #size = (13.6, 7.7)
     add_fig(pdf, "general",      size = size, fontsize = fontsize)
     add_fig(pdf, "avg behavior", size = size, fontsize = fontsize)
     add_fig(pdf, "behavior",     size = size, fontsize = fontsize)
@@ -737,16 +739,16 @@ def multi_plot(d):
     add_fig(pdf, "spikies",      size = size, fontsize = fontsize)
     add_fig(pdf, "extreme days", size = size, fontsize = fontsize)
     add_fig(pdf, "clustering",   size = size, fontsize = fontsize)
-    #add_fig(pdf, "cami",         size = size, fontsize = fontsize)
+    add_fig(pdf, "cami",         size = size, fontsize = fontsize)
     pdf.close()
 
 def add_fig(pdf, which, size, fontsize = 36):
     if which == "general":
     #General/global figure
         g_fig = plt.figure(figsize = size)
-        g_text    = g_fig.add_subplot(2, 2, 1)
+        g_text    = g_fig.add_subplot(1, 2, 1)
         g_hist    = g_fig.add_subplot(2, 2, 2)
-        g_totals  = g_fig.add_subplot(2, 1, 2)
+        g_totals  = g_fig.add_subplot(2, 2, 4)
 
         make_text_fig(d, g_text)
         make_hist_fig(d, g_hist)
