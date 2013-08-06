@@ -911,9 +911,11 @@ if __name__ == "__main__":
     #data, desc = qload("agentis_oneyear_22891_updated.pkl")
     
     num = sys.argv[1]
-    data, desc = qload("agentis_oneyear_" + num + "_updated.pkl")
+    #data, desc = qload("agentis_oneyear_" + num + "_updated.pkl")
+    data, desc = qload("state_b_records_2011_with_temps.pkl")
+                      
 
-    data = [data]
+    #data = [data]
     sys.stdout.flush()
     #data = [data[-1]]
     print "Data desc:", desc

@@ -60,9 +60,10 @@ def get_desc_map():
     qdump((desc_map, desc), "desc_map" + alt_str + ".pkl")
     
 def make_data_pkl():
-
     filenames = [x for x in\
                      listdir(data_loc + "Agentis_Full") if ".csv" in x]
+#    filenames = [x for x in\
+#                     listdir(data_loc + "State") if ".csv" in x]
 
     desc_map, desc = qload("desc_map" + alt_str + ".pkl")
     records        = []

@@ -27,8 +27,25 @@ def get_report(d):
     toR["med"]        = np.median(kwhs[kwhs_oriflag])
     toR["total"]      = np.sum(kwhs[kwhs_oriflag]) 
     
-    #avg hour of daily peak:
+
+    #Difference between weekday and weekend
     is_midnight         = (lambda x: x.hour == 0)
+    skip_weekdays   = (lambda x: x.weekday() < 5)
+    weekends, _     = pn.get_periods(d, 24, is_midnight, "kwhs", skip_weekdays)
+    
+    skip_weekend    = (lambda x: x.weekday() >= 5)
+    weekdays, _     = pn.get_periods(d, 24, is_midnight, "kwhs", skip_weekend)
+
+    weekday_peaks   = np.ma.max(weekdays, axis = 1)
+    weekend_peaks   = np.ma.max(weekends, axis = 1)
+    
+    avg_weekday_peak = np.ma.average(weekday_peaks)
+    avg_weekend_peak = np.ma.average(weekend_peaks)
+    
+    toR["week_day_vs_end_peaks"] = avg_weekday_peak - avg_weekend_peak
+
+    #avg hour of daily peak:
+
     days, new_times     = pn.get_periods(d, 24, is_midnight)
     peak_hours          = np.ma.argmax(days, axis = 1)
     toR["avg_tod_peak"] = np.ma.average(peak_hours)
@@ -42,7 +59,6 @@ def get_report(d):
 
     
     #TODO: Add avg distance (in hours) of daily peak to natural noon
-    
     
     #Phantom load approximation
     is_midnight         = (lambda x: x.hour == 0)
@@ -66,23 +82,25 @@ def get_report(d):
     
 
     #Stats regarding first derivative
-    first_deriv = kwhs[1:] - kwhs[:-1]
+    first_deriv         = kwhs[1:] - kwhs[:-1]
     first_deriv_oriflag = np.logical_and(kwhs_oriflag[1:], kwhs_oriflag[:-1])
-    oris = first_deriv[first_deriv_oriflag]
-    increases = oris[oris > 0]
-    decreases = oris[oris < 0]
+    oris                = first_deriv[first_deriv_oriflag]
+    increases           = oris[oris > 0]
+    decreases           = oris[oris < 0]
 
     toR["avg_increase"] = np.average(increases)
     toR["avg_decrease"] = np.average(decreases)
     toR["var_change"]   = np.var(oris)
     
     #Stats regarding DFT
-    a = np.fft.fft(kwhs)
+    a         = np.fft.fft(kwhs)
     num_times = len(kwhs)
-    half = (num_times + 1) // 2
-    a = a[0:half +1]
-    a[0] = 0 #drop constant part of signal
-    power = a**2 #definition of power
+    half      = (num_times + 1) // 2
+    a         = a[0:half +1]
+    a[0]      = 0 #drop constant part of signal
+
+    power     = a**2 #definition of power
+    power     = np.absolute(power) #to make everything real
     total_power = np.sum(power)
     toR["spectral_power"] = np.real(total_power)
     
@@ -90,10 +108,10 @@ def get_report(d):
     highlighted_freqs   = float(num_times) / highlighted_periods
     for p, f in zip(highlighted_periods, highlighted_freqs):
         mykey = "prop_of_" + str(p)
-        toR[mykey] = np.real((a[f] ** 2) / total_power)
-    
+        toR[mykey] = np.absolute((a[f] ** 2)) / total_power
+
     #Missing values:
-    toR["num_missing"] = len([x for x in kwhs_oriflag if x])
+    toR["num_missing"] = len([x for x in kwhs_oriflag if not x])
     
     return toR
 
@@ -101,9 +119,10 @@ def agg_reports(list_of_brecs):
     """Given a list of building records, return an aggregate report.
     In an aggregate report, each key in a Building Report is mapped to a list of values (one per building).
     """
-    toR = {}
+    toR         = {}
     naics_codes = []
-    errs = open("errs.txt", "w")
+    errs        = open("errs.txt", "w")
+
     for d in list_of_brecs:        
         try:
             r = get_report(d)
@@ -125,8 +144,8 @@ def agg_reports(list_of_brecs):
 
 def plot_agg_reports(agg, add_str = ""):
     for k in agg.keys():
-        fig = plt.figure(figsize = (5, 5))
-        ax  = fig.add_subplot(1, 1, 1)
+        fig      = plt.figure(figsize = (5, 5))
+        ax       = fig.add_subplot(1, 1, 1)
         num_bins = 100# int(np.log2(len(agg.keys())) + 1)
         ax.hist(agg[k], bins = num_bins)
         ax.set_title(k)
@@ -135,7 +154,7 @@ def plot_agg_reports(agg, add_str = ""):
 
 if __name__ == "__main__":
     finns = [x for x in listdir(data_loc) if "_updated.pkl" in x and "oneyear" in x]
-    ds = []
+    ds    = []
  
     for finn in finns:
         d, desc = qload(finn)

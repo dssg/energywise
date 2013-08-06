@@ -101,7 +101,7 @@ def get_dummy_data():
     return dat, names, colors, color_map
 
 if __name__ == "__main__":
-    if False:#True:
+    if False:
         agg, desc = qload("agg_reps.pkl")
         dat, names = from_agg_report_to_mat(agg)
         qdump(((dat, names), "A tuple (dat, names) from the agg report"), "agg_mat.pkl")
@@ -118,8 +118,9 @@ if __name__ == "__main__":
         counts = Counter(colors)
         colors = np.array([c if counts[c] >= 200 else 9999 for c in colors])
         color_map = {}
-        #dat = dat[colors != 9999]
-        #colors = colors[colors != 9999]
+        dat = dat[np.logical_and(colors != 9999, colors != 0)]
+        colors = colors[np.logical_and(colors != 9999, colors != 0)]
+        
         unique_colors = set(colors)
         cmap = {}
         i = 0
@@ -131,7 +132,7 @@ if __name__ == "__main__":
             i += 1
             color_map[thecolor] = c
         colors = np.array([cmap[c] for c in colors])
-        figsize = (30, 30)
+        figsize = (40, 40)
     else:
         dat, names, colors, color_map = get_dummy_data()
         target = dict(Glory = 1.4, Teamwork = 2.3, Confidence = 4.2, Procastination = 3.0)
@@ -141,7 +142,7 @@ if __name__ == "__main__":
 
     make_scatter_mat_fig(fig, dat, colors = colors, names = names, color_map = color_map, target = target)
     if big:
-        plt.savefig(fig_loc + "agg_no9999" + add_str + ".png", bbox_inches='tight', dpi = 300)
+        plt.savefig(fig_loc + "agg_no9999" + add_str + ".png", bbox_inches='tight', dpi = 200)
         #plt.savefig("agg.pdf", bbox_inches='tight')
 
         #plt.show()

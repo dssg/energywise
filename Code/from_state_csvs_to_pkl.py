@@ -1,4 +1,4 @@
-from os import listdir
+from    os import listdir
 from    utils import data_loc, fig_loc, qload, qdump
 from    utils import fill_in, daterange
 from    collections import defaultdict
@@ -60,25 +60,26 @@ def get_desc_map():
     qdump((desc_map, desc), "desc_map" + alt_str + ".pkl")
     
 def make_data_pkl():
-
+#    filenames = [x for x in\
+#                     listdir(data_loc + "Agentis_Full") if ".csv" in x]
     filenames = [x for x in\
-                     listdir(data_loc + "Agentis_Full") if ".csv" in x]
-
+                     listdir(data_loc + "State") if "_new.csv" in x]
+    print filenames
     desc_map, desc = qload("desc_map" + alt_str + ".pkl")
     records        = []
     #fnums         = [15007, 150]
     #fnums          =  [150] + [1500 + i for i in range(10)] + [15000 + i for i in range(100)]
-    fnums = [17002]
+
     
     #for fnum in fnums:
     for finn in filenames:
         print "Processing:", finn
         kwhs  = []
         temps = []
-        fnum  = int(finn.rstrip(".Rdata.csv"))
+        fnum  = int(finn.split(" ")[0])
 
         #finn  = data_loc + "Agentis_Full/" + str(fnum) + ".Rdata.csv"
-        fin   = open(data_loc + "Agentis_Full/" + finn)
+        fin   = open(data_loc + "State/" + finn)
         fin.readline()#ignore header
         for l in fin:
             ind, time_stamp, kwh, v3, temp, date = (0, 0, 0, 0, 0, "0") #just to reset to be safe
@@ -138,8 +139,8 @@ def make_data_pkl():
         kwh_times,  kwh_vals  = zip(*full_kwhs)
         record = {
             "bid"      : fnum,
-            "naics"    : 0,
-            "btype"    : 0,
+            "naics"    : fnaics,
+            "btype"    : fbtype,
             "times"    : np.array(full_year_times),
             "kwhs"     : (np.array(kwh_vals), np.array(kwhs_oriflag)),
             "temps"    : (np.array(temp_vals), np.array(temps_oriflag))}
@@ -148,8 +149,8 @@ def make_data_pkl():
     print len(records), "records recorded."
     desc = "This is a list of Building Records."
     
-    if only_one_year: foutn = "agentis_full_b_records_2011" + alt_str + ".pkl"
-    else: foutn             = "agentis_b_records" + alt_str + ".pkl"
+    if only_one_year: foutn = "state_b_records_2011" + alt_str + ".pkl"
+    else: foutn             = "state_b_records" + alt_str + ".pkl"
 
     qdump((records, desc), foutn)
 
