@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 import cPickle as pickle
 from   scipy.spatial import distance
 #data_loc = "../Data/"
@@ -51,6 +52,7 @@ def qload(finn, loc = ""):
     toR = pickle.load(fin)
     print "\tLoaded"
     fin.close()
+    sys.stdout.flush()
     return toR
 
 def qdump(var, foutn, loc = ""):
@@ -62,6 +64,7 @@ def qdump(var, foutn, loc = ""):
     fout = open(foutn, "wb")
     pickle.dump(var, fout)
     fout.close()
+    sys.stdout.flush()
     print "\tSaved"
 
 def interp(all_times, base_val):

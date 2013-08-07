@@ -109,7 +109,7 @@ def get_report(d):
     for p, f in zip(highlighted_periods, highlighted_freqs):
         mykey = "prop_of_" + str(p)
         toR[mykey] = np.absolute((a[f] ** 2)) / total_power
-
+        print total_power, np.absolute((a[f] ** 2)), toR[mykey]
     #Missing values:
     toR["num_missing"] = len([x for x in kwhs_oriflag if not x])
     

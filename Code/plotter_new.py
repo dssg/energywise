@@ -656,7 +656,7 @@ def extract_legend(fig):
                     labels.append(l)
                     handles.append(h)
     if len(handles) >= 1:
-        fig.legend(handles, labels, "upper right")
+        fig.legend(handles, labels, "upper left")
         
 def make_cami_fig(d, ax):
     kwhs, kwhs_oriflag = d["kwhs"]
