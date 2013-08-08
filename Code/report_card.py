@@ -109,7 +109,7 @@ def get_report(d):
     for p, f in zip(highlighted_periods, highlighted_freqs):
         mykey = "prop_of_" + str(p)
         toR[mykey] = np.absolute((a[f] ** 2)) / total_power
-        print total_power, np.absolute((a[f] ** 2)), toR[mykey]
+
     #Missing values:
     toR["num_missing"] = len([x for x in kwhs_oriflag if not x])
     
@@ -131,8 +131,9 @@ def agg_reports(list_of_brecs):
                     toR[k].append(r[k])
                 else:
                     toR[k] = [r[k]]
-            naics_codes.append(d["naics"])
-
+            #naics_codes.append(d["naics"])
+            naics_codes.append(d["btype"])
+            print d["btype"]
         except Exception as inst:
             print "Failed", d["bid"]
             print type(inst)     # the exception instance
@@ -155,7 +156,7 @@ def plot_agg_reports(agg, add_str = ""):
 if __name__ == "__main__":
     finns = [x for x in listdir(data_loc) if "_updated.pkl" in x and "oneyear" in x]
     ds    = []
- 
+    add_str = "_small"
     for finn in finns:
         d, desc = qload(finn)
         ds.append(d)
@@ -164,7 +165,7 @@ if __name__ == "__main__":
     qdump((agg, "The aggregate reports"), "agg_reps.pkl")
 
     #naicss = [d["naics"] for d in ds]
-    qdump((naicss, "The NAICS codes in the same order as the agg report"), "naics_codes.pkl") 
+    qdump((naicss, "The NAICS codes in the same order as the agg report"), "naics_codes" + add_str +  ".pkl") 
     #plt_agg_reports(agg)
     exit()
     for naics in naicss:
