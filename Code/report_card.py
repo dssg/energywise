@@ -80,7 +80,6 @@ def get_report(d):
     temp_avgs = np.ma.average(temps, axis = 1)
     toR["dCorr_kwhs_temps"] = dCorr(day_totals, temp_avgs)
     
-
     #Stats regarding first derivative
     first_deriv         = kwhs[1:] - kwhs[:-1]
     first_deriv_oriflag = np.logical_and(kwhs_oriflag[1:], kwhs_oriflag[:-1])

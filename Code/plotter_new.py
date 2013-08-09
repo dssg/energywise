@@ -18,12 +18,20 @@ import  heapq
 from    sklearn.cluster import KMeans
 from    sklearn import mixture
 from    holiday import yfhol
+
+import warnings
+
+#    fxn()
+
 utc_tz  = pytz.utc
-tz_used = pytz.timezone("US/Central")
+#tz_used = pytz.timezone("US/Central")
+tz_used = pytz.timezone("America/Chicago")
+
 font = {'size'   : 6}
 the_year = 2011 
 
 #states=pickle.load(open('stateDB.pickle','r'))    
+
 
 
 def getSun(stateID, currentTime, city=None):
@@ -40,27 +48,32 @@ def getSun(stateID, currentTime, city=None):
         #Note:  altitude,azimuth are given in radians
     o = ephem.Observer()    
     stateID.capitalize()
-    dateStamp=ephem.Date(currentTime.astimezone(pytz.utc))
+    dateStamp=currentTime.astimezone(pytz.utc)
     if city is None:
         city=states[stateID]['capital']        
     else:
         try:
             city=states[stateID][city].capitalize()
         except:
-            city=states[stateID]['capital'] 
-            
-    o.lat    = float(states[stateID][city][0])
-    o.long   = float(states[stateID][city][1])
-    o.date   = dateStamp
-    sun = ephem.Sun(o)
+            city=states[stateID]['capital']             
+    the_lat = states[stateID][city][0]
+    the_long = states[stateID][city][1]
+    #IF YOU CONVERT TO FLOAT HERE, EVERYTHING GOES BOOM (but quietly)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+
+        o.lat    = the_lat 
+        o.long   = the_long
+        o.date   = dateStamp
+        sun = ephem.Sun(o)
     alt=sun.alt
-    print currentTime.tzinfo
-    print math.sin(-alt), currentTime.strftime("%m/%d %H:%M:%S"), float(alt)
+    #print currentTime.tzinfo
+    #print math.sin(alt), currentTime.strftime("%m/%d %H:%M:%S"), float(alt)
     #print float(o.lat)
     #print float(o.long)
     
 
-    return float(alt)
+    #return float(alt)
     return math.sin(alt)
 
 def get_periods(di, nobs, first_pred, which = "kwhs", skip_fun = (lambda x: False), wrap_around = False):
@@ -639,7 +652,9 @@ def make_interval_plot(d, ax, start, end, show_temps = True, show_sun = True, sh
     lns1 = ax.plot(times, kwhs, label = "kwhs")
     ax.set_ylabel("kwh")
 
-    suns = np.array([max(0, getSun("IL", x)) for x in times])
+
+    suns = np.array([max(0, getSun("IL", x.replace(tzinfo = tz_used))) for x in times])
+    
     sun_ax = ax.twinx()
     lns2 = sun_ax.plot(times, suns, label = "Sunlight", c = "purple", alpha = 0.3, ls = "dashed")
 
@@ -965,7 +980,6 @@ def _add_fig_cami(pdf, size, fontsize):
     plt.savefig(pdf, format = 'pdf')
 
 def _add_fig_holidays(pdf, size, fontsize):
-        
     holidays    = gen_holidays(d)
     for page in range(4):
         fig = plt.figure(figsize = size)
@@ -998,8 +1012,8 @@ def add_fig(pdf, which, size, fontsize = 36):
      "holidays"    : _add_fig_holidays}[which](pdf, size, fontsize)
 
 if __name__ == "__main__":
-    matplotlib.rc('font', **font)
     states = qload("stateDB.pickle")
+    matplotlib.rc('font', **font)
     #data, desc = qload("agentis_b_records_2011_updated_small.pkl")
     #data, desc = qload("agentis_b_records_2011_updated.pkl")
     #data, desc = qload("agentis_oneyear_19870_updated.pkl")

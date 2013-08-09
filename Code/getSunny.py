@@ -9,7 +9,9 @@ import pytz
 # import matplotlib
 # matplotlib.use('Agg')
 
-states=cPickle.load(open('stateDB.pickle','r'))    
+#loc='D:/DSSG/Data/'
+loc = "C:/Users/Scott/Data/"
+states=cPickle.load(open(loc+'stateDB.pickle','r'))    
  
 #####################################################################
     
@@ -23,10 +25,8 @@ def getSun(stateID,currentTime,city=None):
     # city is optional (defaults to state capital if missing or not found in database)
     # returns sin(altitude) 
     # altitude,azimuth are given in radians
-
     stateID.capitalize()
     dateStamp=currentTime.astimezone(pytz.utc)
-
     if city is None:
         city=states[stateID]['capital']        
     else:
@@ -34,7 +34,6 @@ def getSun(stateID,currentTime,city=None):
             city=states[stateID][city].capitalize()
         except:
             city=states[stateID]['capital'] 
-
     o.lat    = states[stateID][city][0]
     o.long   = states[stateID][city][1]
     o.date   = dateStamp
@@ -44,18 +43,16 @@ def getSun(stateID,currentTime,city=None):
     return math.sin(alt)
 
 
-### TEST
-tz_state = pytz.timezone("America/Chicago")     
-dayTimes=[datetime.datetime(2013, 8, 1, x, 00, 00, 00).replace(tzinfo=tz_state) for x in range(24)]
-results=[getSun("IL",d) for d in dayTimes]
+if __name__ == "__main__":
+    tz_state = pytz.timezone("America/Chicago")     
+    dayTimes=[datetime.datetime(2011, 6, 27, x, 00, 00, 00).replace(tzinfo=tz_state) for x in range(24)]
+    results=[getSun("IL",d) for d in dayTimes]
+    
+    plt.figure(figsize = (10,10))
+    #plt.plot(range(24), results)
+    plt.plot(dayTimes, results)
+    plt.show()
 
-
-t=[]
-y=[]
-
-for d in dayTimes:
-	t.append(d)
-	y.append(getSun('IL',d))
 
 k=[u'America/New_York',
  u'America/Detroit',
