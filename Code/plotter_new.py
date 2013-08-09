@@ -760,22 +760,22 @@ def multi_plot(d):
 
 
     
-    add_fig(pdf, "general",      size = size, fontsize = fontsize)
-    add_fig(pdf, "avg behavior", size = size, fontsize = fontsize)
-    add_fig(pdf, "behavior",     size = size, fontsize = fontsize)
-    add_fig(pdf, "raw",          size = size, fontsize = fontsize)
-    #add_fig(pdf, "outliers",     size = size, fontsize = fontsize)
-    add_fig(pdf, "outliers2",    size = size, fontsize = fontsize)
-    add_fig(pdf, "holidays",     size = size, fontsize = fontsize) 
-    add_fig(pdf, "overthresh",   size = size, fontsize = fontsize)
-    add_fig(pdf, "spikes",      size = size, fontsize = fontsize)
-    add_fig(pdf, "extreme days", size = size, fontsize = fontsize)
-    add_fig(pdf, "clustering",   size = size, fontsize = fontsize)
-    add_fig(pdf, "cami",         size = size, fontsize = fontsize)
+    add_fig(pdf, d, "general",      size = size, fontsize = fontsize)
+    add_fig(pdf, d, "avg behavior", size = size, fontsize = fontsize)
+    add_fig(pdf, d, "behavior",     size = size, fontsize = fontsize)
+    add_fig(pdf, d, "raw",          size = size, fontsize = fontsize)
+    #add_fig(pdf, d, "outliers",     size = size, fontsize = fontsize)
+    add_fig(pdf, d, "outliers2",    size = size, fontsize = fontsize)
+    add_fig(pdf, d, "holidays",     size = size, fontsize = fontsize) 
+    add_fig(pdf, d, "overthresh",   size = size, fontsize = fontsize)
+    add_fig(pdf, d, "spikes",      size = size, fontsize = fontsize)
+    add_fig(pdf, d, "extreme days", size = size, fontsize = fontsize)
+    add_fig(pdf, d, "clustering",   size = size, fontsize = fontsize)
+    add_fig(pdf, d, "cami",         size = size, fontsize = fontsize)
     
     pdf.close()
 
-def _add_fig_general(pdf, size, fontsize):
+def _add_fig_general(pdf, d, size, fontsize):
     #General/global figure
     g_fig = plt.figure(figsize = size)
     g_text    = g_fig.add_subplot(1, 2, 1)
@@ -788,7 +788,7 @@ def _add_fig_general(pdf, size, fontsize):
     g_fig.suptitle("BIG OL' TITLE FTW", fontsize = fontsize)
     plt.savefig(pdf, format = 'pdf')
 
-def _add_fig_avg_behavior(pdf, size, fontsize):
+def _add_fig_avg_behavior(pdf, d, size, fontsize):
     #Avg behavior figure    
     n_fig = plt.figure(figsize = size)
     n_avgday  = n_fig.add_subplot(2, 1, 1)
@@ -801,7 +801,7 @@ def _add_fig_avg_behavior(pdf, size, fontsize):
     extract_legend(n_fig)
     plt.savefig(pdf, format = 'pdf')
 
-def _add_fig_behavior(pdf, size, fontsize):
+def _add_fig_behavior(pdf, d, size, fontsize):
     #Behavior fig
     b_fig      = plt.figure(figsize = size)
     b_vstemp   = b_fig.add_subplot(2, 2, 1)
@@ -818,7 +818,7 @@ def _add_fig_behavior(pdf, size, fontsize):
     extract_legend(b_fig)
     plt.savefig(pdf, format = 'pdf')
 
-def _add_fig_raw(pdf, size, fontsize):
+def _add_fig_raw(pdf, d, size, fontsize):
     #Raw data figure
     a_fig = plt.figure(figsize = size)
     a_temps    = a_fig.add_subplot(3, 1, 1)
@@ -832,7 +832,7 @@ def _add_fig_raw(pdf, size, fontsize):
     extract_legend(a_fig)
     plt.savefig(pdf, format = 'pdf')
 
-def _add_fig_outliers(pdf, size, fontsize):    
+def _add_fig_outliers(pdf, d, size, fontsize):    
 #outliers 
     o_fig = plt.figure(figsize = size)
     avg_day = o_fig.add_subplot(5, 2, 1)
@@ -859,7 +859,7 @@ def _add_fig_outliers(pdf, size, fontsize):
     plt.subplots_adjust(hspace = .55)
     plt.savefig(pdf, format = 'pdf')
 
-def _add_fig_outliers2(pdf, size, fontsize):
+def _add_fig_outliers2(pdf, d, size, fontsize):
     #outliers, 2 page
     times = d["times"]
 
@@ -902,7 +902,7 @@ def _add_fig_outliers2(pdf, size, fontsize):
         extract_legend(o_fig)
         plt.savefig(pdf, format = 'pdf')
 
-def _add_fig_overthresh(pdf, size, fontsize):
+def _add_fig_overthresh(pdf, d, size, fontsize):
     #overthresh
 
     kwhs, kwhs_oriflag = d["kwhs"]
@@ -920,7 +920,7 @@ def _add_fig_overthresh(pdf, size, fontsize):
     plt.subplots_adjust(hspace = .35)
     plt.savefig(pdf, format = 'pdf')
 
-def _add_fig_spikes(pdf, size, fontsize):
+def _add_fig_spikes(pdf, d, size, fontsize):
     #spikes
     times     = d["times"]
     num_times = 6 
@@ -939,7 +939,7 @@ def _add_fig_spikes(pdf, size, fontsize):
     extract_legend(s_fig)
     plt.savefig(pdf, format = 'pdf')
 
-def _add_fig_extreme_days(pdf, size, fontsize):
+def _add_fig_extreme_days(pdf, d, size, fontsize):
     #extreme days
     ex_fig      = plt.figure(figsize = size)
     axavg       = ex_fig.add_subplot(3, 1, 1)
@@ -952,7 +952,7 @@ def _add_fig_extreme_days(pdf, size, fontsize):
     extract_legend(ex_fig)
     plt.savefig(pdf, format = 'pdf')
 
-def _add_fig_clustering(pdf, size, fontsize):
+def _add_fig_clustering(pdf, d, size, fontsize):
     #clustering fig
     c_fig      = plt.figure(figsize = size)
     types_ax   = c_fig.add_subplot(2, 1, 1)
@@ -961,7 +961,7 @@ def _add_fig_clustering(pdf, size, fontsize):
     c_fig.suptitle("Types of days", fontsize = fontsize)
     plt.savefig(pdf, format = 'pdf')
 
-def _add_fig_cami(pdf, size, fontsize):
+def _add_fig_cami(pdf, d, size, fontsize):
     #Cami fig
     cami_fig = plt.figure(figsize = size)
     ax = cami_fig.add_subplot(1, 1, 1)
@@ -969,7 +969,7 @@ def _add_fig_cami(pdf, size, fontsize):
     cami_fig.suptitle("SAVE ALL THE MONIES", fontsize = fontsize)
     plt.savefig(pdf, format = 'pdf')
 
-def _add_fig_holidays(pdf, size, fontsize):
+def _add_fig_holidays(pdf, d, size, fontsize):
     holidays    = gen_holidays(d)
     for page in range(4):
         fig = plt.figure(figsize = size)
@@ -989,7 +989,7 @@ def _add_fig_holidays(pdf, size, fontsize):
         plt.subplots_adjust(hspace = .25)
         plt.savefig(pdf, format = 'pdf')
 
-def add_fig(pdf, which, size, fontsize = 36):
+def add_fig(pdf, d, which, size, fontsize = 36):
     {"general"     : _add_fig_general,
      "avg behavior": _add_fig_avg_behavior,
      "behavior"    : _add_fig_behavior,
@@ -1001,7 +1001,7 @@ def add_fig(pdf, which, size, fontsize = 36):
      "extreme days": _add_fig_extreme_days,
      "clustering"  : _add_fig_clustering,
      "cami"        : _add_fig_cami,
-     "holidays"    : _add_fig_holidays}[which](pdf, size, fontsize)
+     "holidays"    : _add_fig_holidays}[which](pdf, d, size, fontsize)
 
 if __name__ == "__main__":
     states = qload("stateDB.pickle")
