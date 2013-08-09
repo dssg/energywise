@@ -18,10 +18,7 @@ import  heapq
 from    sklearn.cluster import KMeans
 from    sklearn import mixture
 from    holiday import yfhol
-
-import warnings
-
-#    fxn()
+import  warnings
 
 utc_tz  = pytz.utc
 #tz_used = pytz.timezone("US/Central")
@@ -29,9 +26,6 @@ tz_used = pytz.timezone("America/Chicago")
 
 font = {'size'   : 6}
 the_year = 2011 
-
-#states=pickle.load(open('stateDB.pickle','r'))    
-
 
 
 def getSun(stateID, currentTime, city=None):
@@ -340,7 +334,7 @@ def make_avg_week_fig(d, avgweek):
     avg_week  = np.ma.average(weeks, axis = 0)
     std_week  = np.ma.std(weeks, axis = 0)
 
-    avgweek.errorbar(np.arange(168), avg_week, yerr =std_week, label = "Energy Usage", errorevery = 6)
+    avgweek.errorbar(np.arange(168), avg_week, yerr = std_week, label = "Energy Usage", errorevery = 6, c = "purple")
 
     avgweek.set_title("Average Week")
     avgweek.set_ylabel("Energy Usage (kwh)")
@@ -392,8 +386,6 @@ def make_peak_fig(d, ax, ind):
     ax -- The axis to hold the figure.
     ind -- The index of the time to display.
     """
-
-
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
  
@@ -403,8 +395,6 @@ def make_peak_fig(d, ax, ind):
     rightmost = min(len(kwhs), ind+12)
     
     make_interval_plot(d, ax, leftmost, rightmost)
-    
-
 
 def make_kwh_vs_sun_fig(d, ax, agg_days = False):
     """Show a 2d-histogram of kwhs vs the position of the sun in a given axis.
@@ -533,7 +523,7 @@ def gen_strange_pers(d, num_pers = 3, period = "day"):
 #        yield vals, temps, times
         
 
-def make_strange_per_fig(d, ax, per):
+def make_strange_per_fig(d, ax, per, c = 'blue'):
     """Creates a plot of the period yieled from get_strange_pers.
 
     Parameters:
@@ -542,7 +532,7 @@ def make_strange_per_fig(d, ax, per):
     per -- The period yieled from get_strange_pers.
     """
     start, end = per
-    make_interval_plot(d, ax, start, end)
+    make_interval_plot(d, ax, start, end, c = c)
     ax.set_title(d["times"][start].strftime("%m/%d/%Y %H:%M:%S") + "--" + d["times"][end].strftime("%m/%d/%Y %H:%M:%S"))
 
 def make_extreme_days_figs(d, axhigh, axlow):
@@ -637,7 +627,7 @@ def get_times_of_highest_change(d, num_times, direction = "increase"):
     return inds
 
 
-def make_interval_plot(d, ax, start, end, show_temps = True, show_sun = True, show_weekends = True):
+def make_interval_plot(d, ax, start, end, show_temps = True, show_sun = True, show_weekends = True, c = 'blue'):
 
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
@@ -649,7 +639,7 @@ def make_interval_plot(d, ax, start, end, show_temps = True, show_sun = True, sh
     temps_oriflag = temps_oriflag[start:end]
     times         = times[start:end]
 
-    lns1 = ax.plot(times, kwhs, label = "kwhs")
+    lns1 = ax.plot(times, kwhs, label = "kwhs", c = c)
     ax.set_ylabel("kwh")
 
 
@@ -901,7 +891,7 @@ def _add_fig_outliers2(pdf, size, fontsize):
             except StopIteration:
                 break
             week_fig = o_fig.add_subplot(4, 2, 2*(i + 2))
-            make_strange_per_fig(d, week_fig, w)
+            make_strange_per_fig(d, week_fig, w, c = "purple")
             week_fig.set_title(times[p[0]].strftime("%m/%d/%y") + " - " + 
                                times[p[1]].strftime("%m/%d/%y"))
                 
@@ -995,6 +985,8 @@ def _add_fig_holidays(pdf, size, fontsize):
             ax.set_title(holiname)
             make_interval_plot(d, ax, hol[0], hol[1])
         extract_legend(fig)
+        plt.subplots_adjust(wspace = .35)
+        plt.subplots_adjust(hspace = .25)
         plt.savefig(pdf, format = 'pdf')
 
 def add_fig(pdf, which, size, fontsize = 36):
