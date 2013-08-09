@@ -29,7 +29,7 @@ def get_report(d):
     
 
     #Difference between weekday and weekend
-    is_midnight         = (lambda x: x.hour == 0)
+    is_midnight     = (lambda x: x.hour == 0)
     skip_weekdays   = (lambda x: x.weekday() < 5)
     weekends, _     = pn.get_periods(d, 24, is_midnight, "kwhs", skip_weekdays)
     
@@ -156,7 +156,7 @@ def plot_agg_reports(agg, add_str = ""):
 if __name__ == "__main__":
     finns = [x for x in listdir(data_loc) if "_updated.pkl" in x and "oneyear" in x]
     ds    = []
-    add_str = "_small"
+    add_str = "_btype"
     for finn in finns:
         d, desc = qload(finn)
         ds.append(d)

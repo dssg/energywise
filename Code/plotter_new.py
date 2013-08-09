@@ -17,11 +17,11 @@ import  pytz
 import  heapq
 from    sklearn.cluster import KMeans
 from    sklearn import mixture
-
+from    holiday import yfhol
 utc_tz  = pytz.utc
 tz_used = pytz.timezone("US/Central")
 font = {'size'   : 6}
- 
+the_year = 2011 
 
 #states=pickle.load(open('stateDB.pickle','r'))    
 
@@ -40,8 +40,7 @@ def getSun(stateID, currentTime, city=None):
         #Note:  altitude,azimuth are given in radians
     o = ephem.Observer()    
     stateID.capitalize()
-    dateStamp=currentTime.astimezone(pytz.utc)
-    
+    dateStamp=ephem.Date(currentTime.astimezone(pytz.utc))
     if city is None:
         city=states[stateID]['capital']        
     else:
@@ -55,6 +54,13 @@ def getSun(stateID, currentTime, city=None):
     o.date   = dateStamp
     sun = ephem.Sun(o)
     alt=sun.alt
+    print currentTime.tzinfo
+    print math.sin(-alt), currentTime.strftime("%m/%d %H:%M:%S"), float(alt)
+    #print float(o.lat)
+    #print float(o.long)
+    
+
+    return float(alt)
     return math.sin(alt)
 
 def get_periods(di, nobs, first_pred, which = "kwhs", skip_fun = (lambda x: False), wrap_around = False):
@@ -196,7 +202,7 @@ def make_kwhs_vs_time_fig(d, tvk):
 
 def make_freqs_fig(d, freqs):
     """Show kwhs in the frequency domain (via the DFT).
-       Note: This function requires data from (all of) 2011.
+       Note: This function requires data from (all of) the_year.
 
     Parameters:
     d -- The building record.
@@ -206,8 +212,8 @@ def make_freqs_fig(d, freqs):
     kwhs, kwhs_oriflag   = d["kwhs"]
     temps, temps_oriflag = d["temps"]
 
-    start_time  = "01/01/2011 00:00:00"
-    end_time    = "01/01/2012 00:00:00"
+    start_time  = "01/01/%d 00:00:00" %the_year
+    end_time    = "01/01/%d 00:00:00" %(the_year + 1)
     start_ts    = int(itime.mktime(datetime.strptime(start_time, "%m/%d/%Y %H:%M:%S").timetuple()))
     end_ts      = int(itime.mktime(datetime.strptime(end_time, "%m/%d/%Y %H:%M:%S").timetuple()))
     
@@ -444,7 +450,24 @@ def make_monthly_usage_fig(d, ax):
     ax.set_ylabel("kwhs")
     ax.grid(True)
 
+def gen_holidays(d):
+    times = d["times"]
+    holidays = yfhol(the_year)
+    holidays = holidays.items()
+    holinames, holidates = zip(*holidays)
+    mymap = dict(zip(holidates, holinames))
 
+    is_midnight     = (lambda x: x.hour == 0)
+    days, new_times = get_periods(d, 24, is_midnight, "kwhs")
+    for t in new_times:
+        date = t[0].date()
+        if date in holidates:
+            left_side  =max(0,  np.argmax(times == t[0]) - 24)
+            right_side =min(len(times), np.argmax(times == t[-1]) + 24)
+            
+            yield (left_side, right_side), mymap[date]
+
+    #need to return (left_side, right_side)
 def gen_strange_pers(d, num_pers = 3, period = "day"):
     """A generator which yields the strangest period (day or week).
 
@@ -487,7 +510,6 @@ def gen_strange_pers(d, num_pers = 3, period = "day"):
         left_side  = np.argmax(times == new_times[ind][0])#hackish, but oh well
         right_side = np.argmax(times == new_times[ind][-1])#hackish, but oh well
  
-
         yield left_side, right_side
 
 #        vals = pers[ind]
@@ -697,7 +719,7 @@ def make_cluster_fig(d, types_ax, times_ax):
     
         # days[:, c] /= np.linalg.norm(days[:, c])
 
-    num_clusters = 5 #TODO: auto-pick num_clusters
+    num_clusters = 3 #TODO: auto-pick num_clusters
     clusterer = KMeans(init='k-means++', n_clusters=num_clusters, n_init=10)
     #clusterer = mixture.GMM(n_components=3, covariance_type='full')
     #clusterer = mixture.DPGMM(n_components=3, covariance_type='full')
@@ -730,170 +752,250 @@ def multi_plot(d):
     pdf = PdfPages(fig_loc + 'multipage_' + str(d["bid"]) + '.pdf')
     size = (8.5, 11)
     #size = (13.6, 7.7)
+
+
+    
     add_fig(pdf, "general",      size = size, fontsize = fontsize)
     add_fig(pdf, "avg behavior", size = size, fontsize = fontsize)
     add_fig(pdf, "behavior",     size = size, fontsize = fontsize)
     add_fig(pdf, "raw",          size = size, fontsize = fontsize)
-    add_fig(pdf, "outliers",     size = size, fontsize = fontsize)
+    #add_fig(pdf, "outliers",     size = size, fontsize = fontsize)
+    add_fig(pdf, "outliers2",    size = size, fontsize = fontsize)
+    add_fig(pdf, "holidays",     size = size, fontsize = fontsize) 
     add_fig(pdf, "overthresh",   size = size, fontsize = fontsize)
-    add_fig(pdf, "spikies",      size = size, fontsize = fontsize)
+    add_fig(pdf, "spikes",      size = size, fontsize = fontsize)
     add_fig(pdf, "extreme days", size = size, fontsize = fontsize)
     add_fig(pdf, "clustering",   size = size, fontsize = fontsize)
     add_fig(pdf, "cami",         size = size, fontsize = fontsize)
+    
     pdf.close()
 
-def add_fig(pdf, which, size, fontsize = 36):
-    if which == "general":
+def _add_fig_general(pdf, size, fontsize):
     #General/global figure
-        g_fig = plt.figure(figsize = size)
-        g_text    = g_fig.add_subplot(1, 2, 1)
-        g_hist    = g_fig.add_subplot(2, 2, 2)
-        g_totals  = g_fig.add_subplot(2, 2, 4)
-
-        make_text_fig(d, g_text)
-        make_hist_fig(d, g_hist)
-        make_monthly_usage_fig(d, g_totals)
-        g_fig.suptitle("BIG OL' TITLE FTW", fontsize = fontsize)
-        plt.savefig(pdf, format = 'pdf')
-
-    elif which == "avg behavior":
-    #Avg behavior figure
-        n_fig = plt.figure(figsize = size)
-        n_avgday  = n_fig.add_subplot(2, 1, 1)
-        n_avgweek = n_fig.add_subplot(2, 1, 2)
-
-        make_avg_day_fig(d, n_avgday)
-        make_avg_week_fig(d, n_avgweek)
-
-        n_fig.suptitle("Average Behavior", fontsize = fontsize)
-        extract_legend(n_fig)
-        plt.savefig(pdf, format = 'pdf')
+    g_fig = plt.figure(figsize = size)
+    g_text    = g_fig.add_subplot(1, 2, 1)
+    g_hist    = g_fig.add_subplot(2, 2, 2)
+    g_totals  = g_fig.add_subplot(2, 2, 4)
     
-    elif which == "behavior":
+    make_text_fig(d, g_text)
+    make_hist_fig(d, g_hist)
+    make_monthly_usage_fig(d, g_totals)
+    g_fig.suptitle("BIG OL' TITLE FTW", fontsize = fontsize)
+    plt.savefig(pdf, format = 'pdf')
+
+def _add_fig_avg_behavior(pdf, size, fontsize):
+    #Avg behavior figure    
+    n_fig = plt.figure(figsize = size)
+    n_avgday  = n_fig.add_subplot(2, 1, 1)
+    n_avgweek = n_fig.add_subplot(2, 1, 2)
+    
+    make_avg_day_fig(d, n_avgday)
+    make_avg_week_fig(d, n_avgweek)
+    
+    n_fig.suptitle("Average Behavior", fontsize = fontsize)
+    extract_legend(n_fig)
+    plt.savefig(pdf, format = 'pdf')
+
+def _add_fig_behavior(pdf, size, fontsize):
     #Behavior fig
-        b_fig      = plt.figure(figsize = size)
-        b_vstemp   = b_fig.add_subplot(2, 2, 1)
-        b_vssun    = b_fig.add_subplot(2, 2, 2)
-        b_vstempad = b_fig.add_subplot(2, 2, 3)
-        b_vssunad  = b_fig.add_subplot(2, 2, 4)
-        
-        make_temp_vs_kwh_fig(d, b_vstemp, False)
-        make_kwh_vs_sun_fig(d, b_vssun)
-        make_temp_vs_kwh_fig(d, b_vstempad, True)
-        make_kwh_vs_sun_fig(d, b_vssunad, True)
-        
-        b_fig.suptitle("Average Behavior", fontsize = fontsize)
-        extract_legend(b_fig)
-        plt.savefig(pdf, format = 'pdf')
-    elif which == "raw":
+    b_fig      = plt.figure(figsize = size)
+    b_vstemp   = b_fig.add_subplot(2, 2, 1)
+    b_vssun    = b_fig.add_subplot(2, 2, 2)
+    b_vstempad = b_fig.add_subplot(2, 2, 3)
+    b_vssunad  = b_fig.add_subplot(2, 2, 4)
+    
+    make_temp_vs_kwh_fig(d, b_vstemp, False)
+    make_kwh_vs_sun_fig(d, b_vssun)
+    make_temp_vs_kwh_fig(d, b_vstempad, True)
+    make_kwh_vs_sun_fig(d, b_vssunad, True)
+    
+    b_fig.suptitle("Average Behavior", fontsize = fontsize)
+    extract_legend(b_fig)
+    plt.savefig(pdf, format = 'pdf')
+
+def _add_fig_raw(pdf, size, fontsize):
     #Raw data figure
-        a_fig = plt.figure(figsize = size)
-        a_temps    = a_fig.add_subplot(3, 1, 1)
-        a_kwhs     = a_fig.add_subplot(3, 1, 2)
-        a_freqs    = a_fig.add_subplot(3, 1, 3)
-        
-        make_temp_vs_time_fig(d, a_temps)
-        make_kwhs_vs_time_fig(d, a_kwhs)
-        make_freqs_fig(d, a_freqs)
-        a_fig.suptitle("Raw Data", fontsize = fontsize)
-        extract_legend(a_fig)
-        plt.savefig(pdf, format = 'pdf')
-    elif which == "outliers":
-    #outliers 
+    a_fig = plt.figure(figsize = size)
+    a_temps    = a_fig.add_subplot(3, 1, 1)
+    a_kwhs     = a_fig.add_subplot(3, 1, 2)
+    a_freqs    = a_fig.add_subplot(3, 1, 3)
+    
+    make_temp_vs_time_fig(d, a_temps)
+    make_kwhs_vs_time_fig(d, a_kwhs)
+    make_freqs_fig(d, a_freqs)
+    a_fig.suptitle("Raw Data", fontsize = fontsize)
+    extract_legend(a_fig)
+    plt.savefig(pdf, format = 'pdf')
+
+def _add_fig_outliers(pdf, size, fontsize):    
+#outliers 
+    o_fig = plt.figure(figsize = size)
+    avg_day = o_fig.add_subplot(5, 2, 1)
+    make_avg_day_fig(d, avg_day)
+    times = d["times"]
+    
+    days = gen_strange_pers(d, 3, period = "day")
+    for i, p in enumerate(days):
+        day_fig = o_fig.add_subplot(4, 2, 2*(i + 2)-1)
+        make_strange_per_fig(d, day_fig, p)
+        day_fig.set_title(times[p[0]].strftime("%m/%d/%y"))
+
+    avg_week = o_fig.add_subplot(5, 2, 2)
+    make_avg_week_fig(d, avg_week)
+
+    weeks = gen_strange_pers(d, 3, period = "week")
+    for i, p in enumerate(weeks):
+        week_fig = o_fig.add_subplot(4, 2, 2*(i + 2))
+        make_strange_per_fig(d, week_fig, p)
+        week_fig.set_title(times[p[0]].strftime("%m/%d/%y") + " - " + 
+                           times[p[1]].strftime("%m/%d/%y"))
+    o_fig.suptitle("Outliers", fontsize = fontsize)
+    extract_legend(o_fig)
+    plt.subplots_adjust(hspace = .55)
+    plt.savefig(pdf, format = 'pdf')
+
+def _add_fig_outliers2(pdf, size, fontsize):
+    #outliers, 2 page
+    times = d["times"]
+
+    days = gen_strange_pers(d, 6, period = "day")        
+    weeks = gen_strange_pers(d, 6, period = "week")
+
+    for page in range(2):
         o_fig = plt.figure(figsize = size)
         avg_day = o_fig.add_subplot(5, 2, 1)
         make_avg_day_fig(d, avg_day)
-        times = d["times"]
+        for i in range(3):
+            try:
+                p = days.next()
+            except StopIteration:
+                break
 
-        days = gen_strange_pers(d, 3, period = "day")
-        for i, p in enumerate(days):
             day_fig = o_fig.add_subplot(4, 2, 2*(i + 2)-1)
             make_strange_per_fig(d, day_fig, p)
             day_fig.set_title(times[p[0]].strftime("%m/%d/%y"))
 
+
+
+        #now the weeks:
         avg_week = o_fig.add_subplot(5, 2, 2)
         make_avg_week_fig(d, avg_week)
-
-        weeks = gen_strange_pers(d, 3, period = "week")
-        for i, p in enumerate(weeks):
+        for i in range(3):
+            try:
+                w = weeks.next()
+            except StopIteration:
+                break
             week_fig = o_fig.add_subplot(4, 2, 2*(i + 2))
-            make_strange_per_fig(d, week_fig, p)
+            make_strange_per_fig(d, week_fig, w)
             week_fig.set_title(times[p[0]].strftime("%m/%d/%y") + " - " + 
                                times[p[1]].strftime("%m/%d/%y"))
+                
+
         o_fig.suptitle("Outliers", fontsize = fontsize)
-        extract_legend(o_fig)
+        plt.subplots_adjust(wspace = .35)
         plt.subplots_adjust(hspace = .55)
+        extract_legend(o_fig)
         plt.savefig(pdf, format = 'pdf')
 
-    elif which == "overthresh":
+def _add_fig_overthresh(pdf, size, fontsize):
     #overthresh
-        kwhs, kwhs_oriflag = d["kwhs"]
-        thresh            = np.percentile(kwhs[kwhs_oriflag], 99)
-        overtimes         = gen_over_thresh(d, thresh)
-        ot_fig = plt.figure(figsize = size)
+
+    kwhs, kwhs_oriflag = d["kwhs"]
+    thresh             = np.percentile(kwhs[kwhs_oriflag], 99)
+    overtimes          = gen_over_thresh(d, thresh)
+    ot_fig = plt.figure(figsize = size)
     
-        for i, p in enumerate(overtimes):
-            if i >= 9: break
-            over_fig = ot_fig.add_subplot(3, 3, i + 1)
-            make_strange_per_fig(d, over_fig, p)
+    for i, p in enumerate(overtimes):
+        if i >= 9: break
+        over_fig = ot_fig.add_subplot(3, 3, i + 1)
+        make_strange_per_fig(d, over_fig, p)
 
-        ot_fig.suptitle("Times in the top 1%%\n (>%.2f)" % thresh, fontsize = 24)
-        extract_legend(ot_fig)
-        plt.subplots_adjust(hspace = .35)
-        plt.savefig(pdf, format = 'pdf')
+    ot_fig.suptitle("Times in the top 1%%\n (>%.2f)" % thresh, fontsize = 24)
+    extract_legend(ot_fig)
+    plt.subplots_adjust(hspace = .35)
+    plt.savefig(pdf, format = 'pdf')
 
-    elif which == "spikes":
+def _add_fig_spikes(pdf, size, fontsize):
     #spikes
-        times     = d["times"]
-        num_times = 6 
-        inds      = get_times_of_highest_change(d, num_times, direction = "increase")
-        s_fig     = plt.figure(figsize = size)
-        
-        for i, ind in enumerate(inds):
-            left_side  = max(0,          ind-12)
-            right_side = min(len(times), ind+12)
-            ax = s_fig.add_subplot(num_times//2, 2, i+1)
-            make_interval_plot(d, ax, left_side, right_side)
-            ax.set_title("Spike at " + times[ind].strftime("%m/%d/%y %H:%M:%S"))
+    times     = d["times"]
+    num_times = 6 
+    inds      = get_times_of_highest_change(d, num_times, direction = "increase")
+    s_fig     = plt.figure(figsize = size)
+    
+    for i, ind in enumerate(inds):
+        left_side  = max(0,          ind-12)
+        right_side = min(len(times), ind+12)
+        ax = s_fig.add_subplot(num_times//2, 2, i+1)
+        make_interval_plot(d, ax, left_side, right_side)
+        ax.set_title("Spike at " + times[ind].strftime("%m/%d/%y %H:%M:%S"))
 
         
-        s_fig.suptitle("Spikes", fontsize = fontsize)
-        extract_legend(s_fig)
-        plt.savefig(pdf, format = 'pdf')
- 
-    elif which == "extreme days":
+    s_fig.suptitle("Spikes", fontsize = fontsize)
+    extract_legend(s_fig)
+    plt.savefig(pdf, format = 'pdf')
+
+def _add_fig_extreme_days(pdf, size, fontsize):
     #extreme days
-        ex_fig      = plt.figure(figsize = size)
-        axavg       = ex_fig.add_subplot(3, 1, 1)
-        axhigh      = ex_fig.add_subplot(3, 1, 2)
-        axlow       = ex_fig.add_subplot(3, 1, 3)
-        make_avg_day_fig(d, axavg)
-        make_extreme_days_figs(d, axhigh, axlow)
-        
-        ex_fig.suptitle("Extreme days", fontsize = fontsize)
-        extract_legend(ex_fig)
-        plt.savefig(pdf, format = 'pdf')
+    ex_fig      = plt.figure(figsize = size)
+    axavg       = ex_fig.add_subplot(3, 1, 1)
+    axhigh      = ex_fig.add_subplot(3, 1, 2)
+    axlow       = ex_fig.add_subplot(3, 1, 3)
+    make_avg_day_fig(d, axavg)
+    make_extreme_days_figs(d, axhigh, axlow)
+    
+    ex_fig.suptitle("Extreme days", fontsize = fontsize)
+    extract_legend(ex_fig)
+    plt.savefig(pdf, format = 'pdf')
 
-    elif which == "clustering":
+def _add_fig_clustering(pdf, size, fontsize):
     #clustering fig
-        c_fig      = plt.figure(figsize = size)
-        types_ax   = c_fig.add_subplot(2, 1, 1)
-        times_ax   = c_fig.add_subplot(2, 1, 2)
-        make_cluster_fig(d, types_ax, times_ax)
-        
-        c_fig.suptitle("Types of days", fontsize = fontsize)
-        
-        plt.savefig(pdf, format = 'pdf')
+    c_fig      = plt.figure(figsize = size)
+    types_ax   = c_fig.add_subplot(2, 1, 1)
+    times_ax   = c_fig.add_subplot(2, 1, 2)
+    make_cluster_fig(d, types_ax, times_ax)
+    c_fig.suptitle("Types of days", fontsize = fontsize)
+    plt.savefig(pdf, format = 'pdf')
 
-    elif which == "cami":
+def _add_fig_cami(pdf, size, fontsize):
     #Cami fig
-        cami_fig = plt.figure(figsize = size)
-        ax = cami_fig.add_subplot(1, 1, 1)
-        make_cami_fig(d, ax)
-        cami_fig.suptitle("SAVE ALL THE MONIES", fontsize = fontsize)
+    cami_fig = plt.figure(figsize = size)
+    ax = cami_fig.add_subplot(1, 1, 1)
+    make_cami_fig(d, ax)
+    cami_fig.suptitle("SAVE ALL THE MONIES", fontsize = fontsize)
+    plt.savefig(pdf, format = 'pdf')
+
+def _add_fig_holidays(pdf, size, fontsize):
+        
+    holidays    = gen_holidays(d)
+    for page in range(4):
+        fig = plt.figure(figsize = size)
+        fig.suptitle("Holidays", fontsize = fontsize)
+        avg_day_ax = fig.add_subplot(221)
+        make_avg_day_fig(d, avg_day_ax)
+        for i in range(3):
+            try:
+                hol, holiname = holidays.next()
+            except StopIteration:
+                break
+            ax = fig.add_subplot(2, 2, 2+i)
+            ax.set_title(holiname)
+            make_interval_plot(d, ax, hol[0], hol[1])
+        extract_legend(fig)
         plt.savefig(pdf, format = 'pdf')
 
-
+def add_fig(pdf, which, size, fontsize = 36):
+    {"general"     : _add_fig_general,
+     "avg behavior": _add_fig_avg_behavior,
+     "behavior"    : _add_fig_behavior,
+     "raw"         : _add_fig_raw,
+     "outliers"    : _add_fig_outliers,
+     "outliers2"   : _add_fig_outliers2,
+     "overthresh"  : _add_fig_overthresh,
+     "spikes"      : _add_fig_spikes,
+     "extreme days": _add_fig_extreme_days,
+     "clustering"  : _add_fig_clustering,
+     "cami"        : _add_fig_cami,
+     "holidays"    : _add_fig_holidays}[which](pdf, size, fontsize)
 
 if __name__ == "__main__":
     matplotlib.rc('font', **font)
@@ -911,11 +1013,14 @@ if __name__ == "__main__":
     #data, desc = qload("agentis_oneyear_22891_updated.pkl")
     
     num = sys.argv[1]
-    #data, desc = qload("agentis_oneyear_" + num + "_updated.pkl")
-    data, desc = qload("state_b_records_2011_with_temps.pkl")
+    if num == "state":
+        data, desc = qload("state_b_records_2011_with_temps.pkl")
+    else:
+        data, desc = qload("agentis_oneyear_" + num + "_updated.pkl")
+        data = [data]
                       
 
-    #data = [data]
+    
     sys.stdout.flush()
     #data = [data[-1]]
     print "Data desc:", desc

@@ -4,7 +4,7 @@ import random
 from utils import *
 import numpy as np
 import matplotlib
-#matplotlib.use('Agg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from plotter_new import extract_legend
@@ -47,7 +47,6 @@ def make_scatter_mat_fig(fig, mat, names = None, classes = None, color_map = Non
                         else:
                             sub_hists.append(col1[classes == c])
                     
-                    print color_map
                     n, bins, patchs = ax2.hist(sub_hists, histtype = 'bar',
                                                color = [color_map[c] for c in class_set], lw = 0)
                     hist_alpha = 0.5 #Make aggregate histogram semi-transparent.
@@ -154,9 +153,10 @@ def get_dummy_data():
     return dat, names, classes, color_map, class_names
 
 if __name__ == "__main__":
-    if False:#True:
+    if True:
         agg, desc = qload("agg_reps.pkl")
-        toDel = ["naics", "avg_weekday_min", "var", "spectral_power", "num_missing", "total"]
+        #toDel = ["naics", "avg_weekday_min", "var", "spectral_power", "num_missing", "total"]
+        toDel = []
         for d in toDel:
             if d in agg:
                 print "removing", d
@@ -167,33 +167,44 @@ if __name__ == "__main__":
         dat, names = from_agg_report_to_mat(agg)
         
         qdump(((dat, names), "A tuple (dat, names) from the agg report"), "agg_mat.pkl")
-        exit()
+        # exit()
 
     big = True# False
     add_str = ""
-    add_str = "_small"
+    add_str = "_btype"
     if big:
         target = None
         t, desc = qload("agg_mat" + add_str + ".pkl")
         dat, names = t
         classes, desc = qload("naics_codes" + add_str + ".pkl")
         counts = Counter(classes)
-        print "\n"
-        print classes
-        classes = np.array([c if counts[c] >= 0 else '9999' for c in classes])
-        print classes
+
+        #classes = np.array([c if counts[c] >= 0 else 9999 for c in classes])
+        classes = np.array([c if counts[c] >= 0 else 'Other' for c in classes])
         color_map = {}
-        #dat = dat[np.logical_and(classes != 9999, classes != 0)]
-        dat = dat[classes != "Unknown"]
+        dat = dat[np.logical_and(classes != "Other", classes != "Unknown")]
+
+        
         classes = np.array(classes)
-        #classes= classes[np.logical_and(classes != 9999, classes != 0)]
-        classes = classes[classes != "Unknown"]
-        print classes, "---"
+        classes= classes[np.logical_and(classes != "Other", classes != "Unknown")]
+
         unique_classes = set(list(classes))
         color_map = {}
         i = 0
-        mycolors = "bgrcmyk"
-        print unique_classes
+        #mycolors = "bgrcmyk"
+        mycolors = ["Blue",
+                    "BlueViolet",
+                    "Brown",
+                    "BurlyWood",
+                    "CadetBlue",
+                    "Chartreuse",
+                    "Chocolate",
+                    "Crimson",
+                    "Cyan",
+                    "DarkBlue"
+                    "DarkGreen",
+                    "DarkMagenta",
+                    "DarkOliveGreen"]
         for c in unique_classes:
             thecolor = mycolors[i % 7]
             color_map[c] = thecolor
