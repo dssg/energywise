@@ -263,10 +263,11 @@ def make_temp_vs_kwh_fig(d, tmpsvk, agg_to_day = False):
 
     both_ori = np.logical_and(temps_oriflag, kwhs_oriflag)
     if agg_to_day:
-        is_sunday_start = (lambda x: x.weekday() == 6 and x.hour == 0)
-        days, new_times = get_periods(d, 24, is_sunday_start)
+        #is_sunday_start = (lambda x: x.weekday() == 6 and x.hour == 0)
+        is_midnight     = (lambda x: x.hour == 0)
+        days, new_times = get_periods(d, 24, is_midnight)
         day_totals      = np.ma.sum(days, axis = 1)
-        temps, new_times = get_periods(d, 24, is_sunday_start, which = "temps")
+        temps, new_times = get_periods(d, 24, is_midnight, which = "temps")
         temp_avgs = np.ma.average(temps, axis = 1)
         #tmpsvk.hist2d(temp_avgs, day_totals, bins = 50, norm = LogNorm())
         tmpsvk.scatter(temp_avgs, day_totals, alpha = .4)
@@ -713,9 +714,10 @@ def make_cluster_fig(d, types_ax, times_ax):
     kwhs, kwhs_oriflag = d["kwhs"]
     times              = d["times"]
 
-    is_sunday_start  = (lambda x: x.weekday() == 6 and x.hour == 0)
+    #is_sunday_start  = (lambda x: x.weekday() == 6 and x.hour == 0)
     #oridays, new_times = get_periods(data, 24, is_sunday_start)
-    days, new_times = get_periods(d, 24, is_sunday_start)
+    is_midnight     = (lambda x: x.hour == 0)
+    days, new_times = get_periods(d, 24, is_midnight)
     oridays = copy.copy(days)
 
     times_ax.plot(times, kwhs, lw=0.5, c="black")
