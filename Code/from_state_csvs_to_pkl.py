@@ -9,7 +9,8 @@ import  numpy as np
 import  pytz
 import  datetime as rdatetime
 from    datetime import datetime
-from   dateutil import tz
+from    dateutil import tz
+the_year = 2011
 
 alt_str       = "_updated" #change this if you cange the examples csv file
 only_one_year = True
@@ -17,7 +18,7 @@ only_one_year = True
 utc_tz = pytz.utc
 # The Agentis data is all from Illinois
 tz_used = pytz.timezone("US/Central")
-
+#tz_used = pytz.utc
 def timeutc_to_dow(time):
     '''Given a UTC Unix timestamp, returns the day of the week in Central time. 0 = Monday, 6 = Sunday'''
     dt = datetime.fromtimestamp(time, utc_tz)
@@ -97,16 +98,17 @@ def make_data_pkl():
             elif len(line) == 5:
                 ind, time_stamp, kwh, temp, date = tuple(line)
             
-            #Strip out 2011:
-            start_time = "01/01/2011 00:00:00"
-            end_time   = "01/01/2012 00:00:00"
-
+            #Strip out the_year:
+            start_time = "01/01/" + str(the_year)+ " 00:00:00"
+            end_time   = "01/01/" + str(the_year + 1) + " 00:00:00"
+            
             start_ts   = datetime.strptime(start_time, "%m/%d/%Y %H:%M:%S")
             start_ts   = start_ts.replace(tzinfo = tz_used)
             end_ts     = datetime.strptime(end_time, "%m/%d/%Y %H:%M:%S")
             end_ts     = end_ts.replace(tzinfo = tz_used)
             ind        = int(string.strip(ind, '"'))
-            time_stamp = datetime.fromtimestamp(float(time_stamp), utc_tz)
+            #time_stamp = datetime.fromtimestamp(float(time_stamp), tz_used)
+            time_stamp = datetime.fromtimestamp(float(time_stamp)).replace(tzinfo  = tz_used)
             
             if (not only_one_year or (time_stamp >= start_ts and time_stamp < end_ts)):
                 if kwh == "NA" or float(kwh) == 0.0:
@@ -124,7 +126,7 @@ def make_data_pkl():
                     temps.append((time_stamp, temp))
 
         fnaics, fbtype = desc_map[fnum]
-        start_date   = datetime.strptime("1/1/2011 00:00:00", "%m/%d/%Y %H:%M:%S").replace(tzinfo = tz_used)
+        start_date   = datetime.strptime("1/1/"+ str(the_year) + " 00:00:00", "%m/%d/%Y %H:%M:%S").replace(tzinfo = tz_used)
         
 
         full_year_times = \
@@ -134,9 +136,10 @@ def make_data_pkl():
             continue
         full_temps, temps_oriflag = fill_in(temps, full_year_times)
         full_kwhs, kwhs_oriflag   = fill_in(kwhs, full_year_times)
-
+        
         temp_times, temp_vals = zip(*full_temps)
         kwh_times,  kwh_vals  = zip(*full_kwhs)
+
         record = {
             "bid"      : fnum,
             "naics"    : fnaics,
@@ -149,7 +152,7 @@ def make_data_pkl():
     print len(records), "records recorded."
     desc = "This is a list of Building Records."
     
-    if only_one_year: foutn = "state_b_records_2011" + alt_str + ".pkl"
+    if only_one_year: foutn = "state_b_records_" + str(the_year) + alt_str + ".pkl"
     else: foutn             = "state_b_records" + alt_str + ".pkl"
 
     qdump((records, desc), foutn)

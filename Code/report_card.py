@@ -16,7 +16,7 @@ def get_report(d):
     toR = {}
     kwhs, kwhs_oriflag   = d["kwhs"]
     temps, temps_oriflag = d["temps"]
-
+    times = d["times"]
     toR["naics"] = d["naics"] #Just to see what happens here...
     
     #General stats
@@ -111,7 +111,55 @@ def get_report(d):
 
     #Missing values:
     toR["num_missing"] = len([x for x in kwhs_oriflag if not x])
+
+    #Relating to boxplots
+    hr_start = 6
+    hr_stop = 17
+    in_schedule = (lambda x: hr_start <= x.hour <= hr_stop)
+    out_schedule = (lambda x: x.hour < hr_start or x.hour > hr_stop)
+    is_weekday = (lambda x: x.weekday() < 5)
+    is_weekend = (lambda x: x.weekday() >= 5)
+
+    out_flag = [out_schedule(t) for t in times]
+    in_flag  = [in_schedule(t) for t in times]
+    weekday_flag = [is_weekday(t) for t in times]
+    weekend_flag = [is_weekend(t) for t in times]
     
+    weekday_kwhs_in  = kwhs[np.logical_and(kwhs_oriflag, np.logical_and(in_flag, weekday_flag))]
+    weekday_kwhs_out = kwhs[np.logical_and(kwhs_oriflag, np.logical_and(out_flag, weekday_flag))]
+
+    weekend_kwhs_in  = kwhs[np.logical_and(kwhs_oriflag, np.logical_and(in_flag, weekend_flag))]
+    weekend_kwhs_out = kwhs[np.logical_and(kwhs_oriflag, np.logical_and(out_flag, weekend_flag))]
+
+    #width of 50percent block
+    weekday_working_75 = np.percentile(weekday_kwhs_in, 75)
+    weekday_working_25 = np.percentile(weekday_kwhs_in, 25)
+    toR["weekday_working_width"] = weekday_working_75 - weekday_working_25
+    
+    weekday_nonworking_75 = np.percentile(weekday_kwhs_out, 75)
+    weekday_nonworking_25 = np.percentile(weekday_kwhs_out, 25)
+    toR["weekday_nonworking_width"] = weekday_working_75 - weekday_working_25
+    
+    weekend_working_75 = np.percentile(weekend_kwhs_in, 75)
+    weekend_working_25 = np.percentile(weekend_kwhs_in, 25)
+    toR["weekend_working_width"] = weekend_working_75 - weekend_working_25
+    
+    weekend_nonworking_75 = np.percentile(weekend_kwhs_out, 75)
+    weekend_nonworking_25 = np.percentile(weekend_kwhs_out, 25)
+    toR["weekend_nonworking_width"] = weekend_working_75 - weekend_working_25
+    
+    #now comparing medians
+    weekday_working_med    = np.median(weekday_kwhs_in)
+    weekday_nonworking_med = np.median(weekday_kwhs_out)
+
+    weekend_working_med    = np.median(weekend_kwhs_in)
+    weekend_nonworking_med = np.median(weekend_kwhs_out)
+
+    toR["weekday_med_dif"]       = weekday_working_med - weekday_nonworking_med
+    toR["weekend_med_dif"]       = weekend_working_med - weekend_nonworking_med
+    toR["day_vs_end_working"]    = weekday_working_med - weekend_working_med
+    toR["day_vs_end_nonworking"] = weekday_nonworking_med - weekend_nonworking_med
+
     return toR
 
 def agg_reports(list_of_brecs):

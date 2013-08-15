@@ -25,7 +25,7 @@ utc_tz  = pytz.utc
 tz_used = pytz.timezone("America/Chicago")
 
 font = {'size'   : 6}
-the_year = 2011 
+the_year = 2011
 
 
 def getSun(stateID, currentTime, city=None):
@@ -157,6 +157,44 @@ def make_text_fig(d, textfig):
     textfig.text(0.05, .95, toPrint, fontsize=10, ha='left', va='top')
     textfig.set_xticks([])
     textfig.set_yticks([])
+
+def make_prison_text_fig(d, textfig):
+    """Show the static information from the building record in a given axis.
+
+    Parameters:
+    d -- The building record.
+    textfig -- The axis to hold the figure.
+    """
+    bid                  = d["bid"]
+    times                = d["times"]
+    kwhs, kwhs_oriflag   = d["kwhs"]
+    temps, temps_oriflag = d["temps"]
+    
+    feature_map, desc = qload("prison_features_map.pkl")
+    print feature_map.keys()
+    features = feature_map[bid]
+    
+    toPrint =  features["name"] + " (" + features["acronym"] + ")"\
+        + "\nCity:\n    " + features["city"]\
+        + "\nID:\n   "   + str(bid)\
+        + "\nNumber of Buildings:\n    " + features["nrBuildings"]\
+        + "\nX-houses:\n    " + features["X_design_housing_units"]\
+        + "\nT-houses:\n    " + features["T_type_housing_units"]\
+        + "\nHealthcare units:\n    " + features["health_care_units"]\
+        + "\nBuilding size:\n    " + features["building_size"]\
+        + "\nTotal land:\n    " + features["total_land"] + "acres"\
+        + "\nAverage Hourly Energy Usage:\n    " + str(np.round(np.average(kwhs), 2)) + "kw"\
+        + "\nMin:\n    "    + str(np.round(np.min(kwhs), 2))\
+        + "\nMax:\n    "    + str(np.round(np.max(kwhs), 2))\
+        + "\nTotal:\n     " + str(np.round(np.sum(kwhs)/1000.0, 2)) + "gwh"
+
+    toPrint += "\n"    
+    width = 50
+
+
+    textfig.text(0.05, .95, toPrint, fontsize=10, ha='left', va='top')
+    textfig.set_xticks([])
+    textfig.set_yticks([])
     
 
 def make_temp_vs_time_fig(d, tvt):
@@ -264,15 +302,14 @@ def make_temp_vs_kwh_fig(d, tmpsvk, agg_to_day = False):
     both_ori = np.logical_and(temps_oriflag, kwhs_oriflag)
     if agg_to_day:
         #is_sunday_start = (lambda x: x.weekday() == 6 and x.hour == 0)
-        is_midnight     = (lambda x: x.hour == 0)
-        days, new_times = get_periods(d, 24, is_midnight)
-        day_totals      = np.ma.sum(days, axis = 1)
+        is_midnight      = (lambda x: x.hour == 0)
+        days, new_times  = get_periods(d, 24, is_midnight)
+        day_avgs        = np.ma.average(days, axis = 1)
         temps, new_times = get_periods(d, 24, is_midnight, which = "temps")
         temp_avgs = np.ma.average(temps, axis = 1)
         #tmpsvk.hist2d(temp_avgs, day_totals, bins = 50, norm = LogNorm())
-        tmpsvk.scatter(temp_avgs, day_totals, alpha = .4)
+        tmpsvk.scatter(temp_avgs, day_avgs, alpha = .4)
         tmpsvk.set_title("Temperature vs Energy Usage (agg days)")
-        
     else:
         tmpsvk.hist2d(temps[both_ori], kwhs[both_ori], bins = 50, norm = LogNorm())
         tmpsvk.set_title("Temperature vs Energy Usage")
@@ -308,9 +345,14 @@ def make_avg_day_fig(d, avgday):
     std_weekday     = np.ma.std(weekdays, axis = 0)
     std_day         = np.ma.std(days, axis = 0)
 
-    avgday.errorbar([-0.25 + x for x in np.arange(24)], avg_weekend, yerr =std_weekend, label = "Weekend")
-    avgday.errorbar(np.arange(24), avg_weekday, yerr =std_weekday, label = "Weekday")
-    avgday.errorbar([0.25 + x for x in np.arange(24)], avg_day,     yerr =std_day,     label = "Day")
+    avgday.errorbar([0.25 + x for x in np.arange(24)][:-1], avg_day[:-1],    yerr =std_day[:-1],    label = "Day",     alpha = .3, fmt = None,  ecolor = "blue")
+    avgday.errorbar([-0.25 + x for x in np.arange(24)][1:], avg_weekend[1:], yerr =std_weekend[1:], label = "Weekend", alpha = .3, fmt = None,  ecolor = "red")
+    avgday.errorbar(np.arange(24),                          avg_weekday,     yerr =std_weekday,     label = "Weekday", alpha = .3, fmt = None,  ecolor = "green")
+
+    avgday.plot(np.arange(24), avg_day,     label = "Day",     c = "blue")
+    avgday.plot(np.arange(24), avg_weekend, label = "Weekend", c = "red")
+    avgday.plot(np.arange(24), avg_weekday, label = "Weekday", c = "green")
+
 
     avgday.set_title("Average Day")
     avgday.set_ylabel("Energy Usage (kwh)")
@@ -318,7 +360,6 @@ def make_avg_day_fig(d, avgday):
     avgday.set_xticks(range(0, 24, 4))
     avgday.grid(True)
     avgday.legend()
-
 
 def make_avg_week_fig(d, avgweek):
     """Show the average week in a given axis.
@@ -335,7 +376,8 @@ def make_avg_week_fig(d, avgweek):
     avg_week  = np.ma.average(weeks, axis = 0)
     std_week  = np.ma.std(weeks, axis = 0)
 
-    avgweek.errorbar(np.arange(168), avg_week, yerr = std_week, label = "Energy Usage", errorevery = 6, c = "purple")
+    avgweek.plot(np.arange(168), avg_week, label = "Energy Usage", c = "purple")
+    avgweek.errorbar(np.arange(168), avg_week, yerr = std_week, label = "Energy Usage", errorevery = 6, ecolor = "purple", fmt = None, alpha = .3)
 
     avgweek.set_title("Average Week")
     avgweek.set_ylabel("Energy Usage (kwh)")
@@ -348,7 +390,6 @@ def make_avg_week_fig(d, avgweek):
 
     avgweek.grid(True)
     avgweek.legend()
-
 
 def make_hist_fig(d, hist):
     """Show a histogram of hourly energy usage.
@@ -418,14 +459,21 @@ def make_kwh_vs_sun_fig(d, ax, agg_days = False):
         d["sun_pos"] = (sun_pos, np.array([True for x in sun_pos]))
         days, new_times = get_periods(d, 24, is_midnight)
         suns, new_times = get_periods(d, 24, is_midnight, which = "sun_pos")
-        day_totals = np.ma.sum(days, axis = 1)
+        day_avgs = np.ma.average(days, axis = 1)
         sun_avgs = np.ma.average(suns, axis = 1)
-        ax.scatter(sun_avgs, day_totals, alpha = .4)
+        ax.scatter(sun_avgs, day_avgs, alpha = .4)
+        ax.set_xlim(np.min(sun_avgs), np.max(sun_avgs))
         ax.set_title("Energy Usage vs sunlight (agg days)")        
     else:
         ax.hist2d(sun_pos[kwhs_oriflag], kwhs[kwhs_oriflag], bins = 50, norm = LogNorm())
         ax.set_title("Energy Usage vs sunlight")        
+        ax.set_xlim(np.min(sun_pos[kwhs_oriflag]), np.max(sun_pos[kwhs_oriflag]))
 
+
+        
+    left, right = ax.get_xlim()
+    ax.set_xticks([left/2., 0, right/2.])
+    ax.set_xticklabels(["Below Horizon", "Sun rise/set", "Above Horizon"])
     ax.set_xlabel("Sunlight")
     ax.set_ylabel("kwh")
     ax.grid(True)
@@ -454,7 +502,58 @@ def make_monthly_usage_fig(d, ax):
     ax.set_ylabel("kwhs")
     ax.grid(True)
 
+def make_boxplot_all_days_fig(d, ax):
+    times = d['times']
+    hr_start = 6
+    hr_stop = 17
+    kwhs, kwhs_oriflag = d["kwhs"]
+    in_schedule = (lambda x: hr_start <= x.hour <= hr_stop)
+    out_schedule = (lambda x: x.hour < hr_start or x.hour > hr_stop)
+    
+    out_flag = [out_schedule(t) for t in times]
+    in_flag  = [in_schedule(t) for t in times]
+
+    kwhs_in  = kwhs[np.logical_and(kwhs_oriflag, in_flag)]
+    kwhs_out = kwhs[np.logical_and(kwhs_oriflag, out_flag)]
+
+    ax.set_ylabel("Energy Usage (kwh)")
+   
+    labels = ['6am - 5pm', '5pm - 6am']
+    ax.set_xticklabels(labels)
+    ax.boxplot([kwhs_in, kwhs_out])
+    ax.yaxis.grid(True)
+    ax.set_title("All days")
+
+def make_boxplot_weekday_vs_end_fig(d, ax):
+    times = d['times']
+    hr_start = 6
+    hr_stop = 17
+    kwhs, kwhs_oriflag = d["kwhs"]
+    in_schedule = (lambda x: hr_start <= x.hour <= hr_stop)
+    out_schedule = (lambda x: x.hour < hr_start or x.hour > hr_stop)
+    is_weekday = (lambda x: x.weekday() < 5)
+    is_weekend = (lambda x: x.weekday() >= 5)
+
+    out_flag = [out_schedule(t) for t in times]
+    in_flag  = [in_schedule(t) for t in times]
+    weekday_flag = [is_weekday(t) for t in times]
+    weekend_flag = [is_weekend(t) for t in times]
+    
+    weekday_kwhs_in  = kwhs[np.logical_and(kwhs_oriflag, np.logical_and(in_flag, weekday_flag))]
+    weekday_kwhs_out = kwhs[np.logical_and(kwhs_oriflag, np.logical_and(out_flag, weekday_flag))]
+
+    weekend_kwhs_in  = kwhs[np.logical_and(kwhs_oriflag, np.logical_and(in_flag, weekend_flag))]
+    weekend_kwhs_out = kwhs[np.logical_and(kwhs_oriflag, np.logical_and(out_flag, weekend_flag))]
+
+    ax.set_ylabel("Energy Usage (kwh)")
+    ax.yaxis.grid(True)
+    labels = ['Weekday 6am - 5pm', 'Weekend 6am - 5pm', 'Weekday 5pm - 6am', 'Weekend 5pm - 6am']
+    ax.set_xticklabels(labels)
+    ax.boxplot([weekday_kwhs_in, weekend_kwhs_in, weekday_kwhs_out, weekend_kwhs_out], positions = [1, 2, 4, 5])
+    ax.set_title("Weekday vs Weekend")
+
 def gen_holidays(d):
+    """A generator that yields federal holidays in the timeframe of the building record d (in chronological order)."""
     times = d["times"]
     holidays = yfhol(the_year)
     holidays = holidays.items()
@@ -466,12 +565,13 @@ def gen_holidays(d):
     for t in new_times:
         date = t[0].date()
         if date in holidates:
-            left_side  =max(0,  np.argmax(times == t[0]) - 24)
-            right_side =min(len(times), np.argmax(times == t[-1]) + 24)
+            #left_side  =max(0,  np.argmax(times == t[0]) - 24)
+            #right_side =min(len(times), np.argmax(times == t[-1]) + 24)
+            left_side  = np.argmax(times == t[0])
+            right_side = np.argmax(times == t[-1])
             
             yield (left_side, right_side), mymap[date]
 
-    #need to return (left_side, right_side)
 def gen_strange_pers(d, num_pers = 3, period = "day"):
     """A generator which yields the strangest period (day or week).
 
@@ -515,14 +615,6 @@ def gen_strange_pers(d, num_pers = 3, period = "day"):
         right_side = np.argmax(times == new_times[ind][-1])#hackish, but oh well
  
         yield left_side, right_side
-
-#        vals = pers[ind]
-#        times = new_times[ind]
-#        temps = temp_pers[ind]
-        
-
-#        yield vals, temps, times
-        
 
 def make_strange_per_fig(d, ax, per, c = 'blue'):
     """Creates a plot of the period yieled from get_strange_pers.
@@ -581,8 +673,8 @@ def gen_over_thresh(d, thresh):
     d -- The building record.
     thresh -- The threshold.
 
-    Returns:
-    TODO
+    Yields a pair of indices -- the times on either side of the point which crosses the threshold. 
+    (12 hours on either side).
     """
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
@@ -602,8 +694,6 @@ def gen_over_thresh(d, thresh):
         tvals  = temps[new_left_side:new_right_side]
 
         yield new_left_side, new_right_side
-        #yield kvals, tvals,  ptimes
-
 
 def get_times_of_highest_change(d, num_times, direction = "increase"):
     """Returns the indices where the highest increase in electricity usage occured.
@@ -628,8 +718,20 @@ def get_times_of_highest_change(d, num_times, direction = "increase"):
     return inds
 
 
-def make_interval_plot(d, ax, start, end, show_temps = True, show_sun = True, show_weekends = True, c = 'blue'):
+def make_interval_plot(d, ax, start, end, show_temps = True, show_sun = True, c = 'blue'):
+    """
+    Given a building record, an axis, and a start/end, plot the interval between the start and end.
 
+    Parameters:
+    d -- The building record.
+    ax -- The axis.
+    start -- Index of start time.
+    end -- Index of end time.
+
+    show_temps [True] -- If True, temperatures are shown in red.
+    show_sun [True] -- If True, sunlight is shown in dashed grey.
+    c ['blue'] -- The color of the kwhs line. 
+    """
     times                = d["times"]
     kwhs, kwhs_oriflag   = d["kwhs"]
     temps, temps_oriflag = d["temps"]    
@@ -642,7 +744,6 @@ def make_interval_plot(d, ax, start, end, show_temps = True, show_sun = True, sh
 
     lns1 = ax.plot(times, kwhs, label = "kwhs", c = c)
     ax.set_ylabel("kwh")
-
 
     suns = np.array([max(0, getSun("IL", x.replace(tzinfo = tz_used))) for x in times])
     
@@ -661,14 +762,20 @@ def make_interval_plot(d, ax, start, end, show_temps = True, show_sun = True, sh
     labs = [l.get_label() for l in lns]
     weather_ax.legend(lns, labs, loc=0)
     
-    
     ax.grid(True)
 
     labels = ax.get_xticklabels() 
     for label in labels: 
         label.set_rotation(30)     
 
-def extract_legend(fig):
+def extract_legend(fig, loc = 'upper left'):
+    """
+    Given a figure, this function goes over each subplot and removes the legends.
+    It then adds a figure legend, which aggregates all subplot legends.
+
+    Note: Each label appears only once in the figure legend, no matter how many subplots have it.
+    So, for example, if each subplot has "temperature", the figure legend will only show one entry for "temperature".
+    """
     axes = fig.get_axes()
     handles = []
     labels  = []
@@ -684,19 +791,25 @@ def extract_legend(fig):
                     labels.append(l)
                     handles.append(h)
     if len(handles) >= 1:
-        fig.legend(handles, labels, "upper left")
+        fig.legend(handles, labels, loc)
         
 def make_cami_fig(d, ax):
+    """
+    Given a building record and an axis, add Cami's favorite plot to the axis.
+    Cami's favorite plot provides a detailed illustration of how much money can be saved.
+    This figure shows a variety of retrofitting options, and the predicted savings induced by each (as well as confidence intervals).
+    """
+    num_hours = 24
     kwhs, kwhs_oriflag = d["kwhs"]
     times              = d["times"]
     is_sunday_start    = (lambda x: x.weekday() == 6 and x.hour == 0)
-    weeks, new_times   = get_periods(d, 168, is_sunday_start)
+    weeks, new_times   = get_periods(d, num_hours, is_sunday_start)
 
     thresh   = np.percentile(weeks, 95, axis = 0)
     avg_week = np.average(weeks, axis = 0)
 
     high_avgs = []
-    for col in range(168):
+    for col in range(num_hours):
         inds = weeks[:, col] >thresh[col]
         high_avgs.append(np.average(weeks[:, col][inds]))
         #high_avgs.append(np.average(weeks[:, col]))
@@ -706,11 +819,16 @@ def make_cami_fig(d, ax):
     sum_high = np.sum(high_avgs)
     ax.set_title("Cami could have saved you:\n%.2f dollars" % ((sum_high - sum_avg) *.05))
 
-    ax.stackplot(range(168), avg_week, high_avgs-avg_week, colors = ["green", "red"])
-    ax.plot(range(168), thresh, ls = "dotted", color = "black")
+    ax.stackplot(range(num_hours), avg_week, high_avgs-avg_week, colors = ["white", "red"])
+    ax.plot(range(num_hours), thresh, ls = "dotted", color = "black")
     
-
+  
 def make_cluster_fig(d, types_ax, times_ax):
+    """
+    Given a building record and two axes, this function populates the axes.
+    The first axis (types_ax) is pouplated with the means of the clusters found via clustering the individual days based on behavior.
+    The second axis (times_ax) is populated with the original signal over the full year, where each day is colored based on its found cluster.
+    """
     kwhs, kwhs_oriflag = d["kwhs"]
     times              = d["times"]
 
@@ -747,35 +865,70 @@ def make_cluster_fig(d, types_ax, times_ax):
     for c, center in enumerate(centers):
         types_ax.plot(center, label = "# days: " + str(len(preds[preds == c])), c = cmap[c])        
 
-
     types_ax.legend()
     types_ax.set_yticks([])
     types_ax.set_ylabel("Relative energy usage")
     for i, d in enumerate(oridays):
         times_ax.plot(new_times[i], d, c = cmap[preds[i]])
 
+def make_deriv_day_fig(d, ax):
+    is_midnight        = (lambda x: x.hour == 0)
+    times              = d["times"]
+    kwhs, kwhs_oriflag = d["kwhs"]
+    deriv = kwhs[1:] - kwhs[:-1]
+    hods = np.array([t.hour for t in times[:-1]])
+    trim = True
+    if trim:
+        #remove 1% of data (extreme values)
+        upper = np.percentile(deriv, 99.5)
+        lower = np.percentile(deriv, 0.5)
+
+        flag = np.array([lower < x and x < upper for x in deriv])
+        deriv = deriv[flag]
+        hods = hods[flag]
+    ax.hist2d(hods, deriv, bins = (23*3, 100), norm = LogNorm())
+    ax.set_xticks(range(23))
+    ax.axhline(0, 0, 1, ls = "dotted", c = "black")
+    ax.set_xlabel("Hours after midnight")
+    ax.set_ylabel("Change in kwh")
+    
 def multi_plot(d):
     fontsize = 36
-    pdf = PdfPages(fig_loc + 'multipage_' + str(d["bid"]) + '.pdf')
+    pdf = PdfPages(fig_loc + 'multipage_' + str(d["bid"]) + '_' + str(the_year) + '.pdf')
     size = (8.5, 11)
     #size = (13.6, 7.7)
 
+    #add_fig(pdf, d, "cami",    size = size, fontsize = fontsize)
+    #add_fig(pdf, d, "box plots", size = size, fontsize = fontsize)
+    
+    #add_fig(pdf, d, "deriv day", size = size, fontsize = fontsize)
 
-    
-    add_fig(pdf, d, "general",      size = size, fontsize = fontsize)
-    add_fig(pdf, d, "avg behavior", size = size, fontsize = fontsize)
-    add_fig(pdf, d, "behavior",     size = size, fontsize = fontsize)
-    add_fig(pdf, d, "raw",          size = size, fontsize = fontsize)
-    #add_fig(pdf, d, "outliers",     size = size, fontsize = fontsize)
-    add_fig(pdf, d, "outliers2",    size = size, fontsize = fontsize)
-    add_fig(pdf, d, "holidays",     size = size, fontsize = fontsize) 
-    add_fig(pdf, d, "overthresh",   size = size, fontsize = fontsize)
-    add_fig(pdf, d, "spikes",      size = size, fontsize = fontsize)
-    add_fig(pdf, d, "extreme days", size = size, fontsize = fontsize)
-    add_fig(pdf, d, "clustering",   size = size, fontsize = fontsize)
-    add_fig(pdf, d, "cami",         size = size, fontsize = fontsize)
-    
+    full_run = True
+    if full_run:
+        add_fig(pdf, d, "general",      size = size, fontsize = fontsize)
+        add_fig(pdf, d, "avg behavior", size = size, fontsize = fontsize)
+        add_fig(pdf, d, "clustering",   size = size, fontsize = fontsize)
+        add_fig(pdf, d, "box plots",    size = size, fontsize = fontsize)
+        add_fig(pdf, d, "behavior",     size = size, fontsize = fontsize)
+        add_fig(pdf, d, "deriv day",    size = size, fontsize = fontsize)
+        add_fig(pdf, d, "outliers2",    size = size, fontsize = fontsize)
+        add_fig(pdf, d, "holidays",     size = size, fontsize = fontsize) 
+        add_fig(pdf, d, "overthresh",   size = size, fontsize = fontsize)
+        add_fig(pdf, d, "spikes",       size = size, fontsize = fontsize)
+        add_fig(pdf, d, "extreme days", size = size, fontsize = fontsize)
+        add_fig(pdf, d, "cami",         size = size, fontsize = fontsize)
+        add_fig(pdf, d, "raw",          size = size, fontsize = fontsize)
+
     pdf.close()
+
+def _add_fig_box_plots(pdf, d, size, fontsize):
+    b_fig = plt.figure(figsize = size)
+    ax_alldays = b_fig.add_subplot(211)
+    ax_split = b_fig.add_subplot(212)
+    make_boxplot_all_days_fig(d, ax_alldays)
+    make_boxplot_weekday_vs_end_fig(d, ax_split)
+    b_fig.suptitle("Effect of Schedule", fontsize = fontsize)
+    plt.savefig(pdf, format = 'pdf')
 
 def _add_fig_general(pdf, d, size, fontsize):
     #General/global figure
@@ -784,7 +937,7 @@ def _add_fig_general(pdf, d, size, fontsize):
     g_hist    = g_fig.add_subplot(2, 2, 2)
     g_totals  = g_fig.add_subplot(2, 2, 4)
     
-    make_text_fig(d, g_text)
+    make_prison_text_fig(d, g_text)
     make_hist_fig(d, g_hist)
     make_monthly_usage_fig(d, g_totals)
     g_fig.suptitle("BIG OL' TITLE FTW", fontsize = fontsize)
@@ -807,8 +960,8 @@ def _add_fig_behavior(pdf, d, size, fontsize):
     #Behavior fig
     b_fig      = plt.figure(figsize = size)
     b_vstemp   = b_fig.add_subplot(2, 2, 1)
-    b_vssun    = b_fig.add_subplot(2, 2, 2)
-    b_vstempad = b_fig.add_subplot(2, 2, 3)
+    b_vssun    = b_fig.add_subplot(2, 2, 3)
+    b_vstempad = b_fig.add_subplot(2, 2, 2)
     b_vssunad  = b_fig.add_subplot(2, 2, 4)
     
     make_temp_vs_kwh_fig(d, b_vstemp, False)
@@ -917,9 +1070,9 @@ def _add_fig_overthresh(pdf, d, size, fontsize):
         over_fig = ot_fig.add_subplot(3, 3, i + 1)
         make_strange_per_fig(d, over_fig, p)
 
-    ot_fig.suptitle("Times in the top 1%%\n (>%.2f)" % thresh, fontsize = 24)
+    ot_fig.suptitle("Times in the top 1%%\n (>%.2fkwhs)" % thresh, fontsize = 24)
     extract_legend(ot_fig)
-    plt.subplots_adjust(hspace = .35)
+    plt.subplots_adjust(hspace = .35, wspace = .5)
     plt.savefig(pdf, format = 'pdf')
 
 def _add_fig_spikes(pdf, d, size, fontsize):
@@ -935,9 +1088,11 @@ def _add_fig_spikes(pdf, d, size, fontsize):
         ax = s_fig.add_subplot(num_times//2, 2, i+1)
         make_interval_plot(d, ax, left_side, right_side)
         ax.set_title("Spike at " + times[ind].strftime("%m/%d/%y %H:%M:%S"))
-
+        ax.axvspan(times[ind], times[ind+1], color = "black", alpha = 0.2)
         
     s_fig.suptitle("Spikes", fontsize = fontsize)
+    s_fig.subplots_adjust(wspace = .35)
+    s_fig.subplots_adjust(hspace = .25)
     extract_legend(s_fig)
     plt.savefig(pdf, format = 'pdf')
 
@@ -973,6 +1128,7 @@ def _add_fig_cami(pdf, d, size, fontsize):
 
 def _add_fig_holidays(pdf, d, size, fontsize):
     holidays    = gen_holidays(d)
+    times = d["times"]
     for page in range(4):
         fig = plt.figure(figsize = size)
         fig.suptitle("Holidays", fontsize = fontsize)
@@ -985,13 +1141,27 @@ def _add_fig_holidays(pdf, d, size, fontsize):
                 break
             ax = fig.add_subplot(2, 2, 2+i)
             ax.set_title(holiname)
-            make_interval_plot(d, ax, hol[0], hol[1])
+
+            #We plot one day on either side of the holiday as well
+            left_side  = max(0, hol[0] - 24)
+            right_side = min(len(times), hol[1] + 24)
+            make_interval_plot(d, ax, left_side, right_side)
+            ax.axvspan(times[hol[0]], times[hol[1]], color = "black", alpha = .2)
+            
         extract_legend(fig)
         plt.subplots_adjust(wspace = .35)
         plt.subplots_adjust(hspace = .25)
         plt.savefig(pdf, format = 'pdf')
 
+def _add_fig_deriv_day(pdf, d, size, fontsize):
+    d_fig      = plt.figure(figsize = size)
+    ax         = d_fig.add_subplot(1, 1, 1)
+    make_deriv_day_fig(d, ax)
+    d_fig.suptitle("Distributions of Load Fluctuations", fontsize = fontsize)
+    plt.savefig(pdf, format = 'pdf')
+
 def add_fig(pdf, d, which, size, fontsize = 36):
+    #Switch statement:
     {"general"     : _add_fig_general,
      "avg behavior": _add_fig_avg_behavior,
      "behavior"    : _add_fig_behavior,
@@ -1003,7 +1173,9 @@ def add_fig(pdf, d, which, size, fontsize = 36):
      "extreme days": _add_fig_extreme_days,
      "clustering"  : _add_fig_clustering,
      "cami"        : _add_fig_cami,
-     "holidays"    : _add_fig_holidays}[which](pdf, d, size, fontsize)
+     "holidays"    : _add_fig_holidays,
+     "box plots"   : _add_fig_box_plots,
+     "deriv day"   : _add_fig_deriv_day,}[which](pdf, d, size, fontsize)
 
 if __name__ == "__main__":
     states = qload("stateDB.pickle")
@@ -1022,7 +1194,8 @@ if __name__ == "__main__":
     
     num = sys.argv[1]
     if num == "state":
-        data, desc = qload("state_b_records_2011_with_temps.pkl")
+        #data, desc = qload("state_b_records_2011_with_temps.pkl")
+        data, desc = qload("state_b_records_" + str(the_year) + "_with_temps_cleaned.pkl")
     else:
         data, desc = qload("agentis_oneyear_" + num + "_updated.pkl")
         data = [data]
@@ -1037,6 +1210,8 @@ if __name__ == "__main__":
     print "\n"
     for ind, d in enumerate(data):
         multi_plot(d)
+        print "*"*10, "Finished report for", d["bid"], "*"*10
+        
         #bid = d["bid"]
         #print str(ind), ": plotted something..."
         sys.stdout.flush()

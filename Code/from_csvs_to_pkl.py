@@ -106,7 +106,7 @@ def make_data_pkl():
             end_ts     = datetime.strptime(end_time, "%m/%d/%Y %H:%M:%S")
             end_ts     = end_ts.replace(tzinfo = tz_used)
             ind        = int(string.strip(ind, '"'))
-            time_stamp = datetime.fromtimestamp(float(time_stamp), utc_tz)
+            time_stamp = datetime.fromtimestamp(float(time_stamp)) #timestamp is assumed to be in utc
             
             if (not only_one_year or (time_stamp >= start_ts and time_stamp < end_ts)):
                 if kwh == "NA" or float(kwh) == 0.0:
