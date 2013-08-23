@@ -2,9 +2,7 @@ import  numpy as np
 import  sys
 import  cPickle as pickle
 from    scipy.spatial import distance
-#data_loc = "../Data/"
-#data_loc = "/mnt/energy_data/Data/"
-data_loc = "C:/Users/Scott/Data/"
+data_loc = "../Data/"
 fig_loc  = "../Figs/"
 the_year = 2012
 
