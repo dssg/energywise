@@ -9,7 +9,7 @@ import  numpy as np
 import  pytz
 import  datetime as rdatetime
 from    datetime import datetime
-from   dateutil import tz
+from    dateutil import tz
 
 alt_str       = "_updated" #change this if you cange the examples csv file
 only_one_year = True

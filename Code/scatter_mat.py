@@ -1,18 +1,20 @@
 import sys
-from collections import Counter
+from   collections import Counter
 import random
-from utils import *
+from   utils import *
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')
+#matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
-from plotter_new import extract_legend
+from   matplotlib.colors import LogNorm
+from   utils import extract_legend
 import matplotlib.cm as cm
 
 def make_scatter_mat_fig(fig, mat,
                          names = None, classes = None, color_map = None,
-                         target = None, class_names = None, zoom = 100, tight = True, label_fontsize = 14):
+                         target = None, class_names = None, zoom = 100, tight = True,
+                         label_fontsize = 14, target_name = "Target", show_diag = True,
+                         show_grid = True):
     """Given a figure, this function populates it with a scatter matrix.
     Subfigures along the diagonal show histograms over individual features (separated by class, when appropriate).
     Subfigures below the diagonal show scatter plots (where colors correspond to classes, when appropriate).
@@ -24,26 +26,67 @@ def make_scatter_mat_fig(fig, mat,
     names [None] -- A list d of column names.
     classes [None] -- A list of n classes (one per data point).
     color_map [None] -- A dictionary mapping a class to a color. The colors are used in the histograms and scatter plots.
-    target [None] -- A single point (currently as a dictionary, gonna switch that to a row vector).
+    target [None] -- A single point to be highlighted.
                      In every 2d subfigure, crosshairs are placed showing the target.
+                     It may be an integer, a dictionary, or an ndarray.
+                     If target is an integer i, then the i-th data point in mat is highlighted.
+                     If target is a dictionary, it maps names to values (e.g., {"height": 4.2, "weight": 1.2}).
+                     If target is an ndarray, then it is treated as a data point as if it was in mat.
     class_names [None] -- A dictionary mapping a class to its name (used in legend).
     zoom [100] -- The percentage of the span to show on each axis of each subplot.
                   For example, if zoom = 95, each subplot has its x and y limits reduced to the 2.5 and 97.5 percentiles of the points shown in that subplot.
     tight [True] -- If True, tick and ticklabels on the diagonal subplots (histograms) are hidden, and inter-subplot space is greatly reduced.
     label_fontsize [14] -- The fontsize of the feature labels.
+    target_name ["Target"] -- The name of the target, used in figure legend.
+    show_diag [True] -- If True, a dashed line correpsonding to x = y is shown in each off-diagonal subplot.
+    show_grid [True] -- If True, grid lines are shown on all off-diagonal subplots.
     """
 
-    #Note: Target is a report
-    #TODO: Change target from dictionary to ndarray (representing one row), and auto-convert if dictionary passed in
     nrows, ncols = mat.shape
+    if isinstance(target, dict):
+        assert names is not None, "Feature names must be specified if target is a dict"
+        nt = []
+        for c in range(ncols):
+            nt.append(target[names[c]])
+        target = np.array(nt)
+        print target, "<<<"
+    elif isinstance(target, int):
+        target = mat[target, :]
+    else:
+        assert isinstance(target, np.ndarray) or isinstance(target, list), "Argument 'target' is of unsupported type"
+
     if classes is not None:
         classes = np.array(classes)
         class_set = set(classes)
-        if color_map is not None:
-            colors = [color_map[c] for c in classes] #the colors of each point
-        
+
+        if color_map is None:
+            unique_classes = set(list(classes))
+            color_map = {}
+            i = 0
+            mycolors = ["Blue",
+                        "BlueViolet",
+                        "Brown",
+                        "BurlyWood",
+                        "CadetBlue",
+                        "Chartreuse",
+                        "Chocolate",
+                        "Crimson",
+                        "Cyan",
+                        "DarkBlue"
+                        "DarkGreen",
+                        "DarkMagenta",
+                        "DarkOliveGreen"]
+            for c in unique_classes:
+                thecolor = mycolors[i % len(mycolors)]
+                color_map[c] = thecolor
+                i += 1
+
+    bmax = ncols * ncols
+    p = 0
     for frow in range(ncols):
         for fcol in range(ncols):
+            p += 1
+            progress_bar(p, bmax)
             col1 = mat[:, frow]
             col2 = mat[:, fcol]
             ax = fig.add_subplot(ncols, ncols, frow * ncols + fcol + 1)
@@ -54,7 +97,7 @@ def make_scatter_mat_fig(fig, mat,
                 if tight:
                     ax.set_yticks([])
                 #if classes are provided, make stacked histogram
-                if color_map is not None:
+                if classes is not None:
                     ax2 = ax.twinx()
                     #ax2.set_ylabel("Individuals")
                     if tight:
@@ -74,25 +117,27 @@ def make_scatter_mat_fig(fig, mat,
                     
                 #Make a histogram of total (aggregate values)
                 ax.hist(col1, color = "grey", alpha = hist_alpha)
-                #ax.set_ylabel("Total")
 
                 if target is not None:
-                    target_x = target[names[frow]]
-                    ax.axvline(target_x, 0, 1, ls = "dashed", c = "red", label = "Target")
+                    target_x = target[frow]
+                    ax.axvline(target_x, 0, 1, ls = "dashed", c = "red", label = target_name)
             else:
-                ax.grid(True)
+                if show_grid:
+                    ax.grid(True)
                 low  = (100 - zoom) / 2
                 high = 100 - low
 
                 mins = min(np.min(col1), np.min(col2))
                 maxs = max(np.max(col1), np.max(col2))
                 
-                ax.plot([mins,maxs], [mins,maxs], ls = "dashed", color = "black", label = r"$x = y$") 
+                if show_diag: 
+                    ax.plot([mins,maxs], [mins,maxs], ls = "dashed", color = "black", label = r"$x = y$") 
                 if target is not None:
-                    target_x = target[names[fcol]]
-                    target_y = target[names[frow]]
-                    ax.axvline(target_x, 0, 1, ls = "dashed", c = "red", label = "Target")
-                    ax.axhline(target_y, 0, 1, ls = "dashed", c = "red", label = "Target")
+                    target_x = target[fcol]
+                    target_y = target[frow]
+                    
+                    ax.axvline(target_x, 0, 1, ls = "dashed", c = "red", label = target_name)
+                    ax.axhline(target_y, 0, 1, ls = "dashed", c = "red", label = target_name)
 
                 if frow > fcol:
                     #We're below the diagonal and we're going to make a scatter plot.
@@ -103,7 +148,7 @@ def make_scatter_mat_fig(fig, mat,
                             else:
                                 label = str(c)
 
-                            ax.scatter(col2[classes == c], col1[classes == c], c = [color_map[x] for x in classes[classes == c]], label = label, alpha = .4, lw = 0, s = 3)
+                            ax.scatter(col2[classes == c], col1[classes == c], c = color_map[c], label = label, alpha = .4, lw = 0, s = 10)
                     else:
                         ax.scatter(col2, col1, alpha = .4, c = "purple", lw = 0)
 
@@ -126,8 +171,6 @@ def make_scatter_mat_fig(fig, mat,
                 ax.set_xticklabels([])
             if frow == ncols - 1 and names is not None: #We're at the bottom, and we have names of columns to place
                 ax.set_xlabel(names[fcol], rotation = 45, fontsize = label_fontsize, va = "top")
-                #ax.xaxis.set_label_coords(0.5, 1.1)
-                #ax.xaxis.set_label_position("top")
 
             if fcol == 0 and names is not None: #We're on the left, and we have names of rows to place
                 ax.set_ylabel(names[frow], rotation = 30, ha = "right", fontsize = label_fontsize)
@@ -193,7 +236,7 @@ if __name__ == "__main__":
 
         #classes = np.array([c if counts[c] >= 0 else 9999 for c in classes])
         classes = np.array([c if counts[c] >= 0 else 'Other' for c in classes])
-        color_map = {}
+        color_map = None
         dat = dat[np.logical_and(classes != "Other", classes != "Unknown")]
 
         
@@ -202,59 +245,41 @@ if __name__ == "__main__":
 
         unique_classes = set(list(classes))
         color_map = {}
-        i = 0
-        #mycolors = "bgrcmyk"
-        mycolors = ["Blue",
-                    "BlueViolet",
-                    "Brown",
-                    "BurlyWood",
-                    "CadetBlue",
-                    "Chartreuse",
-                    "Chocolate",
-                    "Crimson",
-                    "Cyan",
-                    "DarkBlue"
-                    "DarkGreen",
-                    "DarkMagenta",
-                    "DarkOliveGreen"]
-        for c in unique_classes:
-            thecolor = mycolors[i % 7]
-            color_map[c] = thecolor
-            i += 1
-            
+        i = 0            
         figsize = (40, 40)
         class_names = None
     else:
         dat, names, classes, color_map, class_names = get_dummy_data()
-        target = dict(Glory = 1.4, Teamwork = 2.3, Confidence = 4.2, Procastination = 2.0)
+        #target = dict(Glory = 1.4, Teamwork = 2.3, Confidence = 4.2, Procastination = 2.0)
+        #target = dat[0, :]
+        target = 4
         figsize = (14, 14)
 
     fig = plt.figure(figsize = figsize)
     zoom = 100
-    tight = False# True
+    tight = True
     label_fontsize = 14
     args = dict(classes = classes,
                 names = names,
-                color_map = color_map,
+                #color_map = color_map,
                 target = target,
                 class_names = class_names,
                 zoom = zoom,
                 tight = tight,
-                label_fontsize = label_fontsize)
+                label_fontsize = label_fontsize,
+                target_name = "Henry the Badger",
+                show_diag = True,
+                show_grid = False)
+    
     make_scatter_mat_fig(fig, dat, **args)
-
-#classes = classes, names = names, color_map = color_map, target = target, class_names = class_names, zoom = zoom, tight = tight, label_fontsize = label_fontsize)
-    print target
-    print color_map
-    sys.stdout.flush()
     if big:
         plt.savefig(fig_loc + "agg_no9999_zoom" + str(zoom) + ("tight" if tight else "") + add_str + ".png", bbox_inches='tight', dpi = 200)
         #plt.savefig("agg.pdf", bbox_inches='tight')
 
         #plt.show()
     else:
-        plt.tight_layout()
-        plt.savefig(fig_loc + "scatter_mat_demo.png", dpi = 200)
+        #plt.tight_layout()
+        #plt.savefig(fig_loc + "scatter_mat_demo.png", dpi = 200)
         
         plt.show()
         

@@ -1,6 +1,5 @@
 from    os import listdir
-from    utils import data_loc, fig_loc, qload, qdump
-from    utils import fill_in, daterange
+from    utils import *
 from    collections import defaultdict
 import  string
 import  time
@@ -10,7 +9,6 @@ import  pytz
 import  datetime as rdatetime
 from    datetime import datetime
 from    dateutil import tz
-the_year = 2011
 
 alt_str       = "_updated" #change this if you cange the examples csv file
 only_one_year = True
@@ -37,7 +35,6 @@ def get_default_for_map():
 
 def get_desc_map():
     '''This function uses Examples.csv to make  desc_map.pkl -- a file containing the description map. The description map is a dictionary mapping building id (int) to a (naics, building type) pair (int, string).'''
-
     #finn_desc = data_loc + "Agentis/Examples" + alt_str + ".csv"
     finn_desc = data_loc + "location_business_types.csv"
     fin_desc  = open(finn_desc)
@@ -71,7 +68,6 @@ def make_data_pkl():
     #fnums         = [15007, 150]
     #fnums          =  [150] + [1500 + i for i in range(10)] + [15000 + i for i in range(100)]
 
-    
     #for fnum in fnums:
     for finn in filenames:
         print "Processing:", finn
@@ -108,14 +104,22 @@ def make_data_pkl():
             end_ts     = end_ts.replace(tzinfo = tz_used)
             ind        = int(string.strip(ind, '"'))
             #time_stamp = datetime.fromtimestamp(float(time_stamp), tz_used)
-            time_stamp = datetime.fromtimestamp(float(time_stamp)).replace(tzinfo  = tz_used)
-            
+            #time_stamp = datetime.fromtimestamp(float(time_stamp)).replace(tzinfo  = tz_used)
+            try:
+                time_stamp = datetime.strptime(date, "%Y-%m-%d %H:%M:%S").replace(tzinfo = tz_used)
+            except:
+                time_stamp = datetime.strptime(date, "%m/%d/%Y %H:%M").replace(tzinfo = tz_used)
+            '''
+            if time_stamp.day == 13 and time_stamp.month == 3 and time_stamp.year == 2011:
+                print time_stamp
+                print l,
+                print "<", date,">\n"
+            '''
             if (not only_one_year or (time_stamp >= start_ts and time_stamp < end_ts)):
                 if kwh == "NA" or float(kwh) == 0.0:
                     #print "kwh found to be NA"
                     pass
                 else:
-
                     kwh = float(kwh)
                     kwhs.append((time_stamp, kwh))
                 if temp == "NA":
@@ -129,8 +133,12 @@ def make_data_pkl():
         start_date   = datetime.strptime("1/1/"+ str(the_year) + " 00:00:00", "%m/%d/%Y %H:%M:%S").replace(tzinfo = tz_used)
         
 
-        full_year_times = \
-            [(start_date + rdatetime.timedelta(hours = n)) for n in range(8760)]
+        if the_year == 2012:
+            full_year_times = \
+                [(start_date + rdatetime.timedelta(hours = n)) for n in range(8760 + 24)]
+        else:
+            full_year_times = \
+                [(start_date + rdatetime.timedelta(hours = n)) for n in range(8760)]
         if len(temps) == 0 or len(kwhs) == 0:
             print "Empty time series found"
             continue
