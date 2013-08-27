@@ -1,13 +1,56 @@
-import numpy as np
-import sys
-import cPickle as pickle
-from   scipy.spatial import distance
-#data_loc = "../Data/"
-#data_loc = "/mnt/energy_data/Data/"
-data_loc = "C:/Users/Scott/Data/"
+import  numpy as np
+import  sys
+import  cPickle as pickle
+from    scipy.spatial import distance
+data_loc = "../Data/"
+fig_loc  = "../Figs/"
+the_year = 2012
 
-fig_loc = "../Figs/"
+def extract_legend(fig, loc = 'upper left'):
+    """
+    Given a figure, this function goes over each subplot and removes the legends.
+    It then adds a figure legend, which aggregates all subplot legends.
 
+    Note: Each label appears only once in the figure legend, no matter how many subplots have it.
+    So, for example, if each subplot has "temperature", the figure legend will only show one entry for "temperature".
+    """
+    axes = fig.get_axes()
+    handles = []
+    labels  = []
+
+    for ax in axes:
+        hs, ls = ax.get_legend_handles_labels()
+        if len(hs) >= 1:
+            leg = ax.legend()
+            if leg is not None:
+                leg.set_visible(False)
+            for h, l in zip(hs, ls):
+                if l not in labels:
+                    labels.append(l)
+                    handles.append(h)
+    if len(handles) >= 1:
+        fig.legend(handles, labels, loc)
+
+def progress_bar(done, bmax = 100):    
+    """A terminal-based progress bar"""
+    sys.stdout.write ("\r")
+    sys.stdout.write ("[")
+    perc = int((done/float(bmax))*100)
+    sys.stdout.write('\033[94m')
+    red = '\033[91m'
+    end = '\033[0m'
+    spin = "-\|/-\|/-\*"
+    how_far = perc // 10
+    inbar = "*" * how_far + red + spin[how_far] +  end + " " * (10 - how_far) 
+    sys.stdout.write(inbar)
+    sys.stdout.write(end)
+    sys.stdout.write("]")
+    sys.stdout.write(" "+str(perc))
+    sys.stdout.write("%")
+    if done >= bmax:         
+        sys.stdout.write("\r[-FINISHED!-] 100%")
+        sys.stdout.write("\n")
+    sys.stdout.flush()
 
 def dCorr(x, y):
     """Returns the distance-correlation between x and y"""
@@ -38,9 +81,6 @@ def dCorr(x, y):
         return 0.0
     else:
         return toR
-    
- 
-   
     
 def qload(finn, loc = ""): 
     """Unpickles from file with name finn"""
@@ -143,4 +183,4 @@ def fill_in(ts, all_times):
                 toR.append((at, new_val))
                 ori_flag.append(False)
     return toR, ori_flag
-            
+

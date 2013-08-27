@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 import plotter_new as pn
 
+
 def get_report(d):
     """Given a building record d, return a Building Report.
     A Building Report is a dictionary mapping names of features to values.
@@ -113,8 +114,8 @@ def get_report(d):
     toR["num_missing"] = len([x for x in kwhs_oriflag if not x])
 
     #Relating to boxplots
-    hr_start = 6
-    hr_stop = 17
+    hr_start = 8
+    hr_stop = 16
     in_schedule = (lambda x: hr_start <= x.hour <= hr_stop)
     out_schedule = (lambda x: x.hour < hr_start or x.hour > hr_stop)
     is_weekday = (lambda x: x.weekday() < 5)
@@ -200,7 +201,17 @@ def plot_agg_reports(agg, add_str = ""):
         plt.savefig(fig_loc + "agg_reports_" + k + add_str +  ".png")
         plt.close()
 
+def process_prison_quarters():
+    data, desc = qload("state_b_records_" + str(the_year) + "_quarters.pkl")
+    toSave = []
+    for d in data:
+        print d["bid"]
+        sys.stdout.flush()
+        toSave.append((d["bid"], get_report(d)))
+    qdump((toSave, "The Building Reports for the prison facilities, by quarter"), "prison_reps.pkl")
+
 if __name__ == "__main__":
+    process_prison_quarters(); exit()
     finns = [x for x in listdir(data_loc) if "_updated.pkl" in x and "oneyear" in x]
     ds    = []
     add_str = "_btype"
