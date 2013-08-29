@@ -1,6 +1,6 @@
 MIT License (MIT)
 
-Copyright (c) 2013 John Brock, Giorgio Cavaggion, Kyla Cheung, Ahmad Qamar, Aron Culotta 
+Copyright (c) 2013 Scott Alfeld, Camelia Simoiu, Andrea Fernandez Conde 
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
