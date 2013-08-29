@@ -7,6 +7,7 @@ energywise is a project that helped in the enhancement of a tool that profiles a
 
 This project is part of the 2013 [Data Science for Social Good](http://dssg.io) fellowship, in partnership with [Lawrence Berkeley National Laboratory](http://www.lbl.gov/) and with [Agentis Energy](http://agentisenergy.com/). The original tool enhanced during this project is [LBNL's fingerprint tool ](https://fingerprint.lbl.gov/) now an open source project and to which our efforts we hope can complement their work.
 
+![LBNL](http://dssg.io/img/partners/lbnl.png)
 
 ## The Problem
 Buildings use too much energy, and nobody knows what to do about it.
