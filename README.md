@@ -44,7 +44,11 @@ With the information provided by the user a report is created for the building. 
 	- Low sensitivity: the consumption of energy is not highly correlated with outside temperature.
 6. Modeling and prediction of energy consumption yields an estimate on the savings due to the elimination of peaks in consumption.
 
+## Project Layout
 
+* [`Code/`](Code) contains all the python scripts developed for the tool
+    + [`clean_brecs.py`](clean_brecs) converts to cero temperatures that were missing values in web querying
+    + 
 ## Installation Guide
 ```python
 git clone https://github.com/dssg/energywise.git
