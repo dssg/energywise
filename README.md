@@ -46,9 +46,15 @@ With the information provided by the user a report is created for the building. 
 
 ## Project Layout
 
-* [`Code/`](Code) contains all the python scripts developed for the tool
-    + [`clean_brecs.py`](Code/clean_brecs.py) converts to cero temperatures that were missing values in web querying
-    + ljslf
+* [`Code/`](Code) contains all the python scripts developed for the tool.
+    + [`clean_brecs.py`](Code/clean_brecs.py) Converts to cero temperatures that were missing values in web querying.
+    + [`holiday.py`](Code/holiday.py) Generates a list of the federal holidays in any given year.
+    + [`plotter_new.py`](Code/plotter_new.py) Core of the project, generates the full pdf report for each building.
+    + [`query_temps.py`](Code/query_temps.py) For a given building record and location, looks for the temperatures in wunderground (you need to add your personal key to use it).
+    + [`report_card.py`](Code/report_card.py) Generates a python dictionary from which one can extract all the statistics used in the generation of the plots in the final report.
+    + [`temps_to_building_pkl.py`](Code/temps_to_building_pkl.py) Includes the temperatures into the building record.
+    + [`utils.py`](Code/utils.py) All the helper functions.
+    + [`versions.py`](Code/versions.py) Run this to verify versions of the required packages.
 
 ## Installation Guide
 ```python
