@@ -47,7 +47,7 @@ With the information provided by the user a report is created for the building. 
 ## Project Layout
 
 * [`Code/`](Code) contains all the python scripts developed for the tool
-    + [`clean_brecs.py`](clean_brecs.py) converts to cero temperatures that were missing values in web querying
+    + [`clean_brecs.py`](Code/clean_brecs.py) converts to cero temperatures that were missing values in web querying
     + ljslf
 
 ## Installation Guide
