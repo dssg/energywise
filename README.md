@@ -34,10 +34,10 @@ The analysis includes:
 	- Schedule
 
 3. *Anomaly detection*: Classifying days according to their energy consumption patterns. Days can be grouped according to their cycles, periodicity and variability. 
-<img src="http://dssg.io/img/posts/anomaly_detection.png" width="300">
+<img src="http://dssg.io/img/posts/anomaly_detection.png" width="600">
 
 4. *Outlier detection*: within each group of days, particularly extreme days can be recognized. This helps identify erratic energy behavior within a building.
-<img src="http://dssg.io/img/posts/outlier_detection.png" width="300">
+<img src="http://dssg.io/img/posts/outlier_detection.png" width="600">
 
 5. *Temperature sensitivity classification* of a building:
 	- High sensitivity: energy consumption is extremely reactive to outside temperature both when it is high and low.
@@ -45,7 +45,7 @@ The analysis includes:
 	- Low sensitivity: the consumption of energy is not highly correlated with outside temperature.
     
 6. *Peak prediction*: Modeling and prediction of energy consumption yields an estimate on the savings due to the elimination of peaks in consumption.
-<img src="http://dssg.io/img/posts/peak_prediction.png" width="300">
+<img src="http://dssg.io/img/posts/peak_prediction.png" width="600">
 
 **[Read more about our analysis in the wiki](../../wiki/methodology)**
 
@@ -77,7 +77,7 @@ cd energywise
 python setup.py install
 ```
 ## Team
-![outliers](http://dssg.io/img/people/team/energy.png)
+![team](http://dssg.io/img/people/teams/energy.png)
 
 ## Contributing to the Project
 - Feel free to create an issue for any bugs you encounter.
