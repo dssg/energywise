@@ -1,6 +1,6 @@
 energywise
 ==========
-[![LBNL](http://dssg.io/img/partners/lbnl.png)](http://www.lbl.gov/)
+[<img src="http://dssg.io/img/partners/lbnl.png" size=300>](http://www.lbl.gov/)
 [![Agentis](https://github.com/dssg/energywise/wiki/img/agentis.png)](http://agentisenergy.com/)
 
 An energy analytics tool to make commercial building more energy efficient. Energywise profiles a building's energy consumption and gives building managers insights on how to mke their buildings more energy efficient.
