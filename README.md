@@ -77,7 +77,7 @@ cd energywise
 python setup.py install
 ```
 ## Team
-![team](http://dssg.io/img/people/teams/energy.png)
+[![team](http://dssg.io/img/people/teams/energy.png)](http://dssg.io/people)
 
 ## Contributing to the Project
 - Feel free to create an issue for any bugs you encounter.
