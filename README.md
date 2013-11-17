@@ -1,4 +1,4 @@
-energywise
+Energywise: understanding building energy use
 ==========
 [<img src="http://dssg.io/img/partners/lbnl.png" width="200">](http://www.lbl.gov/)
 [![Agentis](https://github.com/dssg/energywise/wiki/img/agentis.png)](http://agentisenergy.com/)
